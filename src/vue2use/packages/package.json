@@ -1,0 +1,51 @@
+{
+  "name": "@vue2/use",
+  "version": "1.0.0",
+  "description": "vue2use",
+  "main": "index.ts",
+  "module": "index.ts",
+  "types": "dist/types/index.d.ts",
+  "unpkg": "dist/vue2use.min.js",
+  "jsdelivr": "dist/vue2use.min.js",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "node": {
+        "production": "./dist/vue2use.cjs.js",
+        "development": "./dist/vue2use.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/vue2use.esm.js",
+      "import": "./dist/vue2use.esm.js",
+      "require": "./dist/vue2use.cjs.js"
+    },
+    "./*": "./*"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git"
+  },
+  "buildOptions": {
+    "name": "vue2use",
+    "formats": [
+      "esm-bundler",
+      "esm-browser",
+      "cjs",
+      "global"
+    ]
+  },
+  "keywords": [
+    "vue",
+    "reactivity",
+    "vuehooks"
+  ],
+  "author": "z",
+  "license": "MIT",
+  "bugs": {
+  },
+  "dependencies": {
+  }
+}

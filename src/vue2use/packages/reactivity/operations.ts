@@ -1,0 +1,24 @@
+export const enum TrackOpTypes {
+  GET = "get",
+  ITERATE = "iterate",
+  HAS = "has",
+}
+
+export const enum TriggerOpTypes {
+  SET = "set",
+  ADD = "add",
+  DELETE = "delete",
+  CLEAR = "clear",
+  ARRAY_MUTATION = "array mutation",
+}
+
+export enum ReactiveFlags {
+  SKIP = "__v_skip",
+  IS_REACTIVE = "__v_isReactive",
+  IS_READONLY = "__v_isReadonly",
+  IS_SHALLOW = "__v_isShallow",
+  RAW = "__v_raw",
+  IS_REF = "__v_isRef",
+  DEP = "dep",
+  OB = "__ob__",
+}

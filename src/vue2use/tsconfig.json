@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "sourceMap": false,
+    "target": "ESNext",
+    "newLine": "LF",
+    "useDefineForClassFields": false,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowJs": false,
+    "strict": true,
+    "noUnusedLocals": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "removeComments": false,
+    "outDir": "./packages/dist/",
+    "rootDir": ".",
+    "jsx": "preserve",
+    "lib": ["ESNext", "dom"],
+    "types": ["vue", "node"],
+    "paths": {
+      "packages/*": ["packages/*"]
+    },
+    "declaration": true,
+    "isolatedDeclarations": false,
+    "composite": true
+  },
+  "include": [
+    "./packages/**/*.ts",
+    "./packages/**/*.d.ts",
+    "packages/index.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
