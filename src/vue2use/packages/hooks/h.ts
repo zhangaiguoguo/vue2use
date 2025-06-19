@@ -33,7 +33,10 @@ export function h(type: any, props?: any, children?: any) {
   }
   //@ts-ignore
   const vnode = vm.$createElement(type, props, children, 2, true);
-  vnode.context = currentInstance as VueInstance;
+  if (vnode) {
+    vnode.ns = void 0;
+    vnode.context = currentInstance as VueInstance;
+  }
 
   return vnode;
 }

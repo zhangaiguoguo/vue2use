@@ -6,8 +6,14 @@ export { h } from "./hooks/h";
 export { getCurrentInstance } from "./hooks/currentInstance";
 export { effectScope, effect } from "./hooks/effect";
 
-export { getContext, useAttrs, useSlots, useModel } from "./hooks/setup";
+export {
+  getContext,
+  useAttrs,
+  useSlots,
+  useModel,
+  useCssVars,
+} from "./hooks/setup";
 
-import Vue2Hooks from "./hooks/transform"
+import Vue2useTransformPlugin from "./hooks/transform";
 
-export default Vue2Hooks;
+export default Vue2useTransformPlugin;

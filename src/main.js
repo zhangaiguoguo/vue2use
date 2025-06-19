@@ -1,6 +1,6 @@
 import Vue, { ref } from "vue";
 import App from "./App.vue";
-import Vue2Hooks from "@/vue2use/packages";
+import Vue2Hooks from "@/vue2use";
 
 Vue.config.productionTip = false;
 

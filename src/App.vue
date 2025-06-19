@@ -53,11 +53,11 @@
     </div>
     <ExposeRef
       ref="exposeRefs2"
-      :a="arr.get('length')"
+      :a="arr.get('length') + numComputed"
       :num="numComputed"
       :numComputed="numComputed"
     />
-    <Component :is="ExposeRef" ref="exposeRefs" />
+    <!-- <Component :is="ExposeRef" ref="exposeRefs" /> -->
     <br />
     <button @click="numComputed++">numComputed++</button>
     <button @click="num++">num++</button>
@@ -92,7 +92,7 @@ import {
   toRaw,
   toValue,
   Watcher,
-} from "@/vue2use/packages";
+} from "@/vue2use";
 import ExposeRef from "@/components/ref/ExposeRef.vue";
 
 export default {
@@ -145,6 +145,7 @@ export default {
     provide("a", ref(1));
 
     // console.log(toRaw(obj));
+    
     return {
       arr,
       exposeRefs,
@@ -162,6 +163,6 @@ export default {
   },
   watch: {},
   computed: {},
-  methods: {},
+  methods: {}
 };
 </script>

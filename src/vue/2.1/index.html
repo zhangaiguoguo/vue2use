@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://unpkg.com/vue@2.1.4/dist/vue.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <button @click="num++">num - {{num}}</button>
+      <ab
+        :num="num"
+        ref="abRef"
+        :n="num"
+        @click.native.self="num++"
+        @update:n="num=$event"
+      >
+        <template scope="{n}">
+          <div>slot - {{n}}</div>
+        </template>
+        <template slot="a" scope="{n}">
+          <div>slot - {{n}}</div>
+        </template>
+        <template slot="ab">
+          <div>slot ab</div>
+        </template>
+      </ab>
+    </div>
+  </body>
+  <script src="./../../vue2use/packages/dist/vue2use.min.js"></script>
+  <script>
+    const {
+      h,
+      default: Vue2Hooks,
+      ref,
+      toValue,
+      effect,
+      onMounted,
+      onUpdated,
+      onUnmounted,
+      getCurrentInstance,
+      useSlots,
+      inject,
+      provide,
+      useCssVars,
+      useModel,
+      watchEffect,
+    } = Vue2use;
+
+    Vue.use(Vue2Hooks);
+
+    const A = Vue.component("ab", {
+      props: { n: {} },
+      emits: ["update:n"],
+      setup(props, { attrs, slots, expose }) {
+        const { proxy } = getCurrentInstance();
+        console.log(proxy);
+        console.log(props);
+        console.log(useSlots());
+        watchEffect(() => {
+          console.log(attrs.num, "attrs");
+        });
+        watchEffect(() => {
+          console.log(slots.default, "slots");
+        });
+
+        const a = inject("a");
+
+        const nModel = useModel(props, "n");
+
+        console.log(nModel, "nModel");
+
+        useCssVars(function (vm, setupState) {
+          return {
+            a: a.value,
+            b: a.value * 2,
+          };
+        });
+
+        expose({
+          a: 1,
+        });
+        return () => {
+          return h("div", null, [
+            h("h1", null, "A " + props.n + "-" + proxy.n + "-" + nModel.value),
+            h("br"),
+            h(
+              "button",
+              {
+                on: {
+                  click() {
+                    nModel.value++;
+                  },
+                },
+              },
+              "更新nModel"
+            ),
+            slots.default?.({ n: nModel.value * 2 }),
+          ]);
+        };
+      },
+      template: `<div id="ab">
+            <h1>A {{n}}</h1>
+            <slot a=1/>
+            <slot name="todo"/>
+        </div>`,
+    });
+    const vm = new Vue({
+      components: { ab: A },
+      setup() {
+        console.log(arguments);
+
+        onMounted(() => {
+          console.log("mounted");
+        });
+
+        onUpdated(() => {
+          console.log("updated");
+        });
+
+        onUnmounted(() => {
+          console.log("onUnmounted");
+        });
+
+        const num = ref(1);
+
+        provide("a", num);
+
+        effect(() => {
+          num.value;
+        });
+
+        return (
+          {
+            num,
+          } &&
+          (() => {
+            return h("div", { attrs: { id: "app" } }, [
+              h(
+                "button",
+                { on: { click: () => num.value++ } },
+                "点击 -" + toValue(num)
+              ),
+              h("br"),
+              h(A, {
+                attrs:
+                  toValue(num) % 2
+                    ? {
+                        num: toValue(num),
+                        n: toValue(num),
+                      }
+                    : {
+                        num: toValue(num),
+                      },
+                ref: "abc",
+                on: {
+                  "update:n": (v) => (num.value = v),
+                },
+                scopedSlots:
+                  num.value % 2
+                    ? {
+                        default({ n }) {
+                          return h("div", null, "slot - " + n);
+                        },
+                      }
+                    : {
+                        default({ n }) {
+                          return h("div", null, "slot2 - " + n);
+                        },
+                        a({ n }) {
+                          return h("div", null, "slot2 - " + n);
+                        },
+                        b({ n }) {
+                          return h("div", null, "slot2 - " + n);
+                        },
+                      },
+                props: { n: num.value },
+              }),
+            ]);
+          })
+        );
+      },
+    });
+
+    vm.$mount("#app");
+    console.log(vm);
+  </script>
+</html>

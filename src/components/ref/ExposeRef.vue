@@ -2,7 +2,7 @@
   <div>
     <h1>Expose Ref Test</h1>
     <input type="text" v-model="msg" />
-    <h1>{{ msg }}</h1>
+    <h1>{{ msg }}{{ a }}</h1>
   </div>
 </template>
 
@@ -19,7 +19,7 @@ import {
   effect,
   watchEffect,
   inject,
-} from "@/vue2use/packages";
+} from "@/vue2use";
 import { defineComponent } from "vue";
 
 export default {
@@ -27,8 +27,8 @@ export default {
     a: {},
   },
   setup(props, context) {
-    const msg = ref("expose ref");
-    getContext().expose({
+    const msg = ref("expose ref1");
+    getContext()?.expose?.({
       msg,
     });
 
@@ -38,13 +38,17 @@ export default {
       console.log("mounted");
     });
 
-    console.log(props);
     useAttrs();
     useSlots();
 
     watchEffect(() => {
       // console.log(context.attrs.num, "11111");
     });
+
+    watchEffect(() => {
+      console.log(props.a, "props");
+    });
+    console.log(props);
 
     effect(
       () => {

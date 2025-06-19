@@ -6,7 +6,7 @@ import type { ComponentInstance } from "vue/types/index";
 
 const V2Watcher: Watcher =
   //@ts-ignore
-  vm._watcher?.constructor || vm._computedWatchers.watcher?.constructor;
+  vm._watcher?.constructor || vm._computedWatchers?.watcher?.constructor || vm._watchers?.[0]?.constructor;
 
 //@ts-ignore
 const v2WatcherPrototype = V2Watcher.prototype;

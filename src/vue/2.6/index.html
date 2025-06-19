@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://unpkg.com/vue@2.5.22/dist/vue.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./../../vue2use/packages/dist/vue2use.js"></script>
+  <script>
+    const {
+      h,
+      default: Vue2Hooks,
+      ref,
+      toValue,
+      effect,
+      onMounted,
+      onUpdated,
+      onUnmounted,
+      getCurrentInstance,
+      useSlots,
+      inject,
+      provide,
+      useCssVars,
+      useModel,
+      watchEffect,
+    } = Vue2use;
+
+    Vue.use(Vue2Hooks);
+
+    const A = Vue.component("ab", {
+      props: { n: {} },
+      emits: ["update:n"],
+      setup(props, { attrs, slots, expose }) {
+        const { proxy } = getCurrentInstance();
+
+        return () => {
+          return;
+        };
+      },
+    });
+
+    const vm = new Vue({
+      components: {},
+      setup() {
+        return () => {
+          return h("div",{})
+        };
+      },
+    });
+
+    vm.$mount("#app");
+    console.log(vm);
+  </script>
+</html>

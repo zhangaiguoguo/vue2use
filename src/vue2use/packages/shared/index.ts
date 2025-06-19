@@ -1,13 +1,13 @@
 const __v_cut_skip = "__v_cut_skip";
 const __isVue = "__isVue";
 const VUE2SETUP = "setup";
-const __scope = "__scope";
 const EMPTY_OBJ: Readonly<any> =
   process.env.NODE_ENV !== "production" ? Object.freeze({}) : {};
 
 const inBrowser: boolean = typeof window !== "undefined";
 
 const NOOP: () => void = () => {};
+const NOOP2 = <T>(v: T): T => v;
 
 const isArray: (arg: any) => arg is any[] = (target) => Array.isArray(target);
 
@@ -198,5 +198,5 @@ export {
   VUE2SETUP,
   EMPTY_OBJ,
   inBrowser,
-  __scope,
+  NOOP2,
 };

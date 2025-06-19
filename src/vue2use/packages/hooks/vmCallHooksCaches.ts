@@ -1,3 +1,4 @@
+import { isArray } from "../shared";
 import type { ComponentInstance } from "vue/types/index";
 
 const VmCallHooksCaches = new Map();
@@ -16,8 +17,18 @@ function patchCallHook(vm: ComponentInstance, key: string, fn: Function) {
   };
 }
 
-function injectVmCallHook(vm: ComponentInstance, key: string, fn: Function) {
-  return patchCallHook(vm, key, fn);
+function injectVmCallHook(
+  vm: ComponentInstance,
+  key: string | string[],
+  fn: Function
+) {
+  if (isArray(key)) {
+    key.forEach((k) => {
+      patchCallHook(vm, k, fn);
+    });
+    return;
+  }
+  patchCallHook(vm, key, fn);
 }
 
 function clearVmCallHooks(vm: ComponentInstance, key: string) {

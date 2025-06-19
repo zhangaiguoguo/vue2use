@@ -40,6 +40,12 @@ export default [
         exports: "named",
       },
       {
+        file: "./packages/dist/vue2use.js",
+        format: "iife",
+        name: "Vue2use",
+        exports: "named",
+      },
+      {
         file: "./packages/dist/vue2use.min.js",
         format: "iife",
         name: "Vue2use",
@@ -51,7 +57,6 @@ export default [
     external: ["vue"],
     plugins: [
       typescript({
-        tsconfig: "./tsconfig.json",
         outputToFilesystem: true,
       }),
       ...resolveReplace(),
@@ -66,9 +71,15 @@ export default [
   {
     input: "./packages/index.ts",
     output: {
-      file: "./packages/dist/types/index.d.ts",
+      file: "./packages/types/index.d.ts",
       format: "es",
     },
-    plugins: [dts()],
+    plugins: [
+      dts({
+        compilerOptions: {
+          skipLibCheck: true,
+        },
+      }),
+    ],
   },
 ];
