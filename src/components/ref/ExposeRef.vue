@@ -2,7 +2,7 @@
   <div>
     <h1>Expose Ref Test</h1>
     <input type="text" v-model="msg" />
-    <h1>{{ msg }}{{ a }}</h1>
+    <h1>{{ msg }}{{ a | pluralize }}</h1>
   </div>
 </template>
 
@@ -19,14 +19,36 @@ import {
   effect,
   watchEffect,
   inject,
+  defineComponent,
 } from "@/vue2use";
-import { defineComponent } from "vue";
 
 export default {
   props: {
     a: {},
   },
+  mixins: [
+    {
+      created() {},
+    },
+  ],
   setup(props, context) {
+    defineComponent({
+      mounted() {
+        console.log("mounted defineComponent");
+      },
+      mixins: [
+        {
+          filters: {
+            pluralize: function (n) {
+              return n === 1 ? "item" : "items";
+            },
+          },
+        }
+      ],
+    });
+    onMounted(() => {
+      console.log("mounted2");
+    });
     const msg = ref("expose ref1");
     getContext()?.expose?.({
       msg,

@@ -12,6 +12,7 @@ export {
   useSlots,
   useModel,
   useCssVars,
+  defineComponent,
 } from "./hooks/setup";
 
 import Vue2useTransformPlugin from "./hooks/transform";

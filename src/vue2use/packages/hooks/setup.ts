@@ -13,6 +13,7 @@ import {
   watchPostEffect,
   trigger,
   reactive,
+  toRaw,
 } from "../reactivity/index";
 import Vue from "vue";
 import {
@@ -28,6 +29,8 @@ import {
   camelize,
   hyphenate,
   inBrowser,
+  toRawType,
+  isObject2,
 } from "../shared";
 import { onBeforeMount, onUnmounted } from "./lifeCycle";
 import {
@@ -41,7 +44,12 @@ import {
   setCurrentInstance,
 } from "./currentInstance";
 import type { ComponentInstance, VNode } from "vue/types/index";
-import { TrackOpTypes, TriggerOpTypes } from "../reactivity/operations";
+import type { ComponentOptions } from "vue/types/options";
+import {
+  ReactiveFlags,
+  TrackOpTypes,
+  TriggerOpTypes,
+} from "../reactivity/operations";
 import { h } from "./h";
 
 enum ComponentInstanceAttrFlag {
@@ -155,6 +163,9 @@ function defineVmOptionsProxy<T extends Record<any, any>>(
   return (l = new Proxy(options, {
     get(target, key, receiver) {
       get && get(target, key, receiver);
+      if (key === ReactiveFlags.RAW) {
+        return options;
+      }
       return Reflect.get(target, key, receiver);
     },
     set(target, key, value, receiver) {
@@ -835,4 +846,129 @@ function useCssVars(
   });
 }
 
-export { initSetup, useSlots, useAttrs, getContext, useModel, useCssVars };
+function defineComponent(
+  options: ComponentOptions<ComponentInstance> | Function
+) {
+  const currentInstance = getCurrentInstance();
+  if (currentInstance) {
+    const i = currentInstance.proxy;
+    const options2 = isFunction(options) ? options() : options;
+    if (!options2) return;
+    mergeComponentOptions(
+      toRaw(i.$options) as ComponentOptions<ComponentInstance>,
+      options2,
+      i
+    );
+  } else {
+    Vue.util.warn(
+      "defineComponent is called without current active component instance."
+    );
+  }
+}
+
+function normalizeInject(
+  options: ComponentOptions<ComponentInstance>,
+  instance?: ComponentInstance
+) {
+  const inject = options.inject;
+  if (!inject) return;
+  const normalized = (options.inject = {}) as any;
+  if (isArray(inject)) {
+    for (let i = 0; i < inject.length; i++) {
+      normalized[inject[i]] = {
+        from: inject[i],
+      };
+    }
+  } else if (isObject2(inject)) {
+    for (let key in inject) {
+      const val = inject[key];
+      normalized[key] = isObject2(val)
+        ? Vue.util.extend(
+            {
+              from: key,
+            },
+            val
+          )
+        : {
+            from: val,
+          };
+    }
+  } else if (process.env.NODE_ENV !== "production") {
+    Vue.util.warn(
+      'Invalid value for option "inject": expected an Array or an Object, ' +
+        "but got ".concat(toRawType(inject), "."),
+      instance as any
+    );
+  }
+}
+
+function normalizeDirectives(options: ComponentOptions<ComponentInstance>) {
+  const dirs = options.directives;
+  if (dirs) {
+    for (let key in dirs) {
+      const def = dirs[key];
+      if (isFunction(def)) {
+        dirs[key] = {
+          bind: def,
+          update: def,
+        };
+      }
+    }
+  }
+}
+
+function mergeComponentOptions(
+  componentOptions: ComponentOptions<ComponentInstance>,
+  options: ComponentOptions<ComponentInstance>,
+  instance?: ComponentInstance
+) {
+  // Vue.util.extend(
+  //   componentOptions,
+  //   Vue.util.mergeOptions(componentOptions, options, instance)
+  // );
+  // return;
+  const optionMergeStrategies = (Vue.config as any).optionMergeStrategies;
+  if (!optionMergeStrategies) {
+    Vue.util.warn(
+      `The current version(${
+        (Vue as any).version
+      }) of vue  'setup' does not support the use of 'defineComponent'`
+    );
+  }
+  normalizeInject(options, instance);
+  normalizeDirectives(options);
+  for (let k in options) {
+    if (k === "mixins") {
+      const mixins = options[k];
+      if (mixins)
+        for (let mixin of mixins) {
+          mergeComponentOptions(
+            componentOptions,
+            mixin as ComponentOptions<ComponentInstance>
+          );
+        }
+      continue;
+    }
+    if (k in optionMergeStrategies) {
+      const res = optionMergeStrategies[k](
+        (componentOptions as any)[k],
+        (options as any)[k],
+        instance,
+        k
+      );
+      if (res) {
+        (componentOptions as any)[k] = res;
+      }
+    }
+  }
+}
+
+export {
+  initSetup,
+  useSlots,
+  useAttrs,
+  getContext,
+  useModel,
+  useCssVars,
+  defineComponent,
+};

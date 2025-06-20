@@ -5,6 +5,7 @@ src/vue2use/node_modules
 src/vue2use/.rollup.cache
 src/vue2use/packages/node_modules
 src/vue2use/packages/dist
+src/vue2use/packages/types
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

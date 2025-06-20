@@ -3,10 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Vue.js • TodoMVC</title>
-    <link
-      rel="stylesheet"
-      href="./css.css"
-    />
+    <link rel="stylesheet" href="./css.css" />
     <style>
       [v-cloak] {
         display: none;
@@ -58,35 +55,22 @@
           </li>
         </ul>
       </section>
-      <footer class="footer" v-show="todos.length" v-cloak>
-        <span class="todo-count">
-          <strong>{{ remaining }}</strong> {{ remaining | pluralize }} left
-        </span>
-        <ul class="filters">
-          <li>
-            <a href="#/all" :class="{ selected: visibility == 'all' }">All</a>
-          </li>
-          <li>
-            <a href="#/active" :class="{ selected: visibility == 'active' }"
-              >Active</a
-            >
-          </li>
-          <li>
-            <a
-              href="#/completed"
-              :class="{ selected: visibility == 'completed' }"
-              >Completed</a
-            >
-          </li>
-        </ul>
-        <button
-          class="clear-completed"
-          @click="removeCompleted"
-          v-show="todos.length > remaining"
-        >
-          Clear completed
-        </button>
-      </footer>
+      <todo-layout-footer v-if="todos.length" ref="todoLayoutFooterRef"
+        :todos="todos"
+        :remaining="remaining"
+        :visibility="visibility"
+        :flag="todos.length ? 'a' : 'b'"
+      >
+        <template #clear>
+          <button
+            class="clear-completed"
+            @click="removeCompleted"
+            v-show="todos.length > remaining"
+          >
+            Clear completed
+          </button>
+        </template>
+      </todo-layout-footer>
     </section>
 
     <script>
@@ -94,7 +78,7 @@
       if (navigator.userAgent.indexOf("PhantomJS") > -1) localStorage.clear();
     </script>
     <!-- Delete ".min" for console warnings in development -->
-    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/vue@2.7.16/dist/vue.js"></script>
     <script src="./../../vue2use/packages/dist/vue2use.js"></script>
     <script src="app.js"></script>
   </body>

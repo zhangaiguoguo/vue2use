@@ -27,7 +27,7 @@ function resolveReplace() {
 
 export default [
   {
-    input: "./packages/index.ts",
+    input: "./packages/main.ts",
     output: [
       {
         file: "./packages/dist/vue2use.cjs.js",
@@ -69,7 +69,7 @@ export default [
     ],
   },
   {
-    input: "./packages/index.ts",
+    input: "./packages/main.ts",
     output: {
       file: "./packages/types/index.d.ts",
       format: "es",
