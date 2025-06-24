@@ -16,7 +16,7 @@ import {
 import { DebuggerEventExtraInfo, DebuggerOptions } from "./debug";
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from "./operations";
 
-export interface DepTarget extends DebuggerOptions {
+interface DepTarget extends DebuggerOptions {
   id: number;
 
   addDep(dep: Dep): void;
@@ -168,4 +168,5 @@ export {
   trackRefValue,
   Dep,
   getTargetReactiveProxyDeps,
+  type DepTarget,
 };

@@ -1,5 +1,5 @@
-import { def, isFunction, isObject, toRawType } from "./shared";
-import { CustomRef, CustomRefFactory, ObjectRefImpl, RefImpl } from "./ref";
+import { def, hasOwn, isObject, toRawType } from "./shared";
+import { isRef, Ref, unref, UnwrapRefSimple } from "./ref";
 import {
   mutableReactiveHandler,
   reactiveProxyMap,
@@ -11,14 +11,12 @@ import {
   shallowReadonlyMap,
 } from "./baseHandler";
 import warn from "./warning";
-import { Dep, triggerRefValue } from "./dep";
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers,
 } from "./collectionHandlers";
-import { ComputedRef, WritableComputedRef } from "./computed";
 import { ReactiveFlags } from "./operations";
 
 export interface Target {
@@ -29,37 +27,31 @@ export interface Target {
   [ReactiveFlags.RAW]?: any;
 }
 
-declare const RefSymbol: unique symbol;
-
-export interface Ref<T = any, S = T> {
-  get value(): T;
-
-  set value(_: S);
-
-  dep: Dep | void;
-
-  [RefSymbol]: true;
-}
-
-export type ToRefs<T = any> = {
-  [K in keyof T]: ObjectRefImpl<T, K>;
-};
-
-declare const ShallowRefMarker: unique symbol;
-export type ShallowRef<T = any, S = T> = Ref<T, S> & {
-  [ShallowRefMarker]?: true;
-};
-
-export type MaybeRef<T = any> =
-  | T
-  | Ref<T>
-  | ShallowRef<T>
-  | WritableComputedRef<T>;
-
-export type MaybeRefOrGetter<T = any> =
-  | MaybeRef<T>
-  | ComputedRef<T>
-  | (() => T);
+type Primitive = string | number | boolean | bigint | symbol | undefined | null;
+export type Builtin = Primitive | Function | Date | Error | RegExp;
+export declare const ShallowReactiveMarker: unique symbol;
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>;
+export type DeepReadonly<T> = T extends Builtin
+  ? T
+  : T extends Map<infer K, infer V>
+  ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends ReadonlyMap<infer K, infer V>
+  ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends WeakMap<infer K, infer V>
+  ? WeakMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends Set<infer U>
+  ? ReadonlySet<DeepReadonly<U>>
+  : T extends ReadonlySet<infer U>
+  ? ReadonlySet<DeepReadonly<U>>
+  : T extends WeakSet<infer U>
+  ? WeakSet<DeepReadonly<U>>
+  : T extends Promise<infer U>
+  ? Promise<DeepReadonly<U>>
+  : T extends Ref<infer U, unknown>
+  ? Readonly<Ref<DeepReadonly<U>>>
+  : T extends {}
+  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : Readonly<T>;
 
 export const toReactive: <T extends unknown>(a: T) => T = (value) =>
   isObject(value) ? reactive(value) : value;
@@ -72,18 +64,6 @@ export const toShallow: <T extends unknown>(a: T) => T = (value) => value;
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW];
   return raw ? toRaw(raw) : observed;
-}
-
-export function shallowRef<T>(value: T): RefImpl<T> {
-  return new RefImpl(value, true);
-}
-
-export function customRef<T>(factory: CustomRefFactory<T>): CustomRef<T> {
-  return new CustomRef(factory);
-}
-
-export function isRef<T>(target: Ref<T> | unknown): target is Ref<T> {
-  return !!(isObject(target) && ReactiveFlags.IS_REF in (target as Target));
 }
 
 export function isReactive(value: any): boolean {
@@ -106,7 +86,7 @@ export function isProxy(value: any): boolean {
 }
 
 export function markRaw<T extends object>(value: T): T {
-  if (Object.isExtensible(value)) {
+  if (!hasOwn(value, ReactiveFlags.SKIP) && Object.isExtensible(value)) {
     def(value, ReactiveFlags.SKIP, true);
   }
   return value;
@@ -192,14 +172,16 @@ export function shallowReactive<T extends object>(target: T): T {
   );
 }
 
-export function readonly<T extends object>(target: T): T {
+export function readonly<T extends object>(
+  target: T
+): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
     true,
     readonlyHandlers,
     readonlyCollectionHandlers,
     readonlyMap
-  );
+  ) as any;
 }
 
 export function shallowReadonly<T extends object>(target: T): T {
@@ -230,58 +212,4 @@ export function proxyRefs<T>(objectWithRefs: T): T {
   return isReactive(objectWithRefs)
     ? objectWithRefs
     : new Proxy(objectWithRefs, shallowUnwrapHandlers);
-}
-
-export function unref<T>(ref2: MaybeRef<T> | ComputedRef<T>): T {
-  return isRef(ref2) ? ref2.value : ref2;
-}
-
-export function triggerRef(ref2: Ref): void {
-  if (isRef(ref2)) {
-    triggerRefValue(ref2, ref2.value, ref2.value);
-  }
-}
-
-export function toRef<T, K extends keyof T>(
-  target: T,
-  key: K,
-  defaultValue?: any,
-  shallow?: boolean
-): ObjectRefImpl<T, K> {
-  return new ObjectRefImpl(target, key, defaultValue, !!shallow);
-}
-
-export function toRefs<T extends object>(target: T): ToRefs<T> {
-  if (!isReactive(target)) {
-    warn("toRefs ", target, "is not reactive");
-  }
-  const object = {};
-  if (isRef(target)) {
-    target = toValue(target as MaybeRefOrGetter<T>);
-  }
-  if (isObject(target)) {
-    for (let k in target) {
-      //@ts-ignore
-      object[k] = new ObjectRefImpl(target, k, target[k], false);
-    }
-  } else {
-    warn("toRefs argument( target ->", target, " ) for an object");
-  }
-  //@ts-ignore
-  return object;
-}
-
-export function ref<T>(target?: T): RefImpl<T> {
-  return new RefImpl<T>(target);
-}
-
-export function toValue<T>(target: MaybeRefOrGetter<T>): T {
-  if (isFunction(target)) {
-    //@ts-ignore
-    return target();
-  }
-  if (isRef(target)) {
-    return target.value;
-  }
-  return target as T;
 }

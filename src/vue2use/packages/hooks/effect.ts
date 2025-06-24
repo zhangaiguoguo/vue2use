@@ -1,4 +1,3 @@
-import type { ComponentInstance } from "vue/types/index";
 import { EffectScope, Watcher } from "../reactivity";
 import { NOOP } from "../shared";
 import { currentInstance } from "./currentInstance";
@@ -10,18 +9,19 @@ declare module "vue/types/vue" {
   }
 }
 
-export const effectScope = function (vm2: ComponentInstance): EffectScope {
+/**
+ * Creates an effect scope object which can capture the reactive effects (i.e.
+ * computed and watchers) created within it so that these effects can be
+ * disposed together. For detailed use cases of this API, please consult its
+ *
+ * @param detached - Can be used to create a "detached" effect scope.
+ */
+export const effectScope = function (): EffectScope {
   const scope = new EffectScope(false);
-  if (vm2 && vm2._scope) {
-    vm2._scope.scopes ??= [];
-    vm2._scope.scopes.push(scope);
-    //@ts-ignore
-    scope.parent ??= vm2._scope;
-  }
   return scope;
 };
 
-export function effect(fn: () => any, scheduler?: (cb: any) => void) {
+export function effect(fn: () => any, scheduler?: (cb: Function) => void) {
   const watcher = new Watcher(currentInstance || vm, fn, NOOP, {
     sync: true,
   });

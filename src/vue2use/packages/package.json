@@ -43,7 +43,8 @@
     "vue",
     "vue reactivity",
     "vue2 componentApi",
-    "vue2Hooks"
+    "vue2Hooks",
+    "vue setup"
   ],
   "author": "zhangag",
   "license": "MIT",

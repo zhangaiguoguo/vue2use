@@ -8,18 +8,19 @@ import {
   NOOP,
 } from "./shared";
 import warn from "./warning";
-import { isReactive, isRef, isShallow, Ref, toRaw } from "./reactive";
-import { Watcher as Effect, Watcher } from "./effect";
+import { isReactive, isShallow, toRaw } from "./reactive";
+import { activeEffect, Watcher as Effect, Watcher } from "./effect";
 import config from "../vueConfig";
 import { Dep } from "./dep";
 import { nextTick } from "../hooks/nextTick";
 import vm from "../vm";
 import { getCurrentInstance } from "../hooks/currentInstance";
-import { ComputedRef } from "./computed";
-import { DebuggerOptions } from "./debug";
+import { type ComputedRef } from "./computed";
+import type { DebuggerOptions } from "./debug";
 import { ReactiveFlags } from "./operations";
+import { isRef, type Ref } from "./ref";
 
-type OnCleanup = (cleanupFn: () => void) => void;
+export type OnCleanup = (cleanupFn: () => void) => void;
 
 export type WatchEffect = (onCleanup: OnCleanup) => void;
 
@@ -226,8 +227,6 @@ function doWatch(
       args = null;
     }
     const res = fn.apply(instance, args);
-    if (deep && res && res[ReactiveFlags.OB])
-      res[ReactiveFlags.OB][ReactiveFlags.DEP].depend();
     return res;
   };
   let getter;
@@ -287,15 +286,17 @@ function doWatch(
       return _traverse(baseGetter_1());
     };
   }
-  let cleanup: () => void;
+  let cleanup: any;
   const onCleanup = function (fn: () => void) {
     cleanup = watcher.onStop = function () {
       call(fn, null);
     };
   };
+
   const watcher = new Effect(instance, getter, NOOP, {
     lazy: true,
   });
+
   watcher.noRecurse = !cb;
   let oldValue = isMultiSource ? [] : null;
   watcher.run = function () {
@@ -378,6 +379,23 @@ function doWatch(
   } else {
     watcher.get();
   }
+
+  const teardown2 = watcher.teardown;
+  watcher.teardown = () => {
+    const cleanups = cleanupMap.get(watcher);
+    if (cleanups) {
+      if (call) {
+        cleanups.forEach((cleanup) => {
+          call(cleanup, "WATCH_CLEANUP");
+        });
+      } else {
+        for (const cleanup of cleanups) cleanup();
+      }
+      cleanupMap.delete(watcher);
+    }
+    teardown2.apply(watcher);
+  };
+
   return () => {
     watcher.teardown();
   };
@@ -459,4 +477,34 @@ export function watchSyncEffect(
     ...options,
     flush: "sync",
   });
+}
+
+const cleanupMap: WeakMap<Watcher, (() => void)[]> = new WeakMap();
+
+/**
+ * Registers a cleanup callback on the current active effect. This
+ * registered cleanup callback will be invoked right before the
+ * associated effect re-runs.
+ *
+ * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ * @param owner - The effect that this cleanup function should be attached to.
+ * By default, the current active effect.
+ */
+export function onWatcherCleanup(
+  cleanupFn: () => void,
+  failSilently = false,
+  owner: Watcher | undefined = activeEffect as Watcher
+): void {
+  if (owner) {
+    let cleanups = cleanupMap.get(owner);
+    if (!cleanups) cleanupMap.set(owner, (cleanups = []));
+    cleanups.push(cleanupFn);
+  } else if (process.env.NODE_ENV !== "production" && !failSilently) {
+    warn(
+      `onWatcherCleanup() was called when there was no active watcher` +
+        ` to associate with.`
+    );
+  }
 }

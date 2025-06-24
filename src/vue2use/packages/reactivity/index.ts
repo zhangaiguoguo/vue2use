@@ -1,8 +1,30 @@
-export { watch, watchEffect, watchPostEffect, watchSyncEffect } from "./watch";
-export * from "./computed";
+export {
+  watch,
+  traverse,
+  onWatcherCleanup,
+  watchSyncEffect,
+  watchEffect,
+  watchPostEffect,
+  type WatchOptions,
+  type WatchStopHandle,
+  type WatchEffect,
+  type WatchSource,
+  type WatchCallback,
+  type OnCleanup,
+} from "./watch";
+export {
+  computed,
+  type ComputedRef,
+  type WritableComputedRef,
+  type WritableComputedOptions,
+  type ComputedGetter,
+  type ComputedSetter,
+  type ComputedRefImpl,
+} from "./computed";
 export * from "./ref";
 export * from "./reactive";
 export * from "./observe";
-export { EffectScope } from "./effectScope";
-export { track, trigger, Dep } from "./dep";
-export { Watcher } from "./effect";
+export { EffectScope, onScopeDispose, getCurrentScope } from "./effectScope";
+export { track, trigger, Dep, type DepTarget } from "./dep";
+export { Watcher, getCurrentWatcher, type WatcherOptions } from "./effect";
+export type * from "./operations";

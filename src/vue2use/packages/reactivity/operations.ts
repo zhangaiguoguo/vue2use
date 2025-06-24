@@ -1,10 +1,10 @@
-export const enum TrackOpTypes {
+export enum TrackOpTypes {
   GET = "get",
   ITERATE = "iterate",
   HAS = "has",
 }
 
-export const enum TriggerOpTypes {
+export enum TriggerOpTypes {
   SET = "set",
   ADD = "add",
   DELETE = "delete",

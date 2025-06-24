@@ -2,7 +2,7 @@
   "name": "vue2use",
   "version": "1.0.0",
   "description": "",
-  "main": "packages/index",
+  "main": "packages/main",
   "types": "packages/types/index.d.ts",
   "scripts": {
     "build": "rollup --config"

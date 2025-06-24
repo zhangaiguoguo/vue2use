@@ -44,7 +44,27 @@ const {
   toValue,
   defineComponent,
   h,
+  getCurrentWatcher,
+  onWatcherCleanup,
 } = Vue2use;
+
+var n = ref(1);
+
+var s = watch(
+  () => {
+    console.log(getCurrentWatcher());
+    onWatcherCleanup(() => {
+      console.log("onWatcherCleanup");
+    });
+    return [toValue(n)];
+  },
+  (v, _, fn) => {
+    console.log(v);
+    fn(() => {
+      console.log("cleaup");
+    });
+  }
+);
 
 const TodoLayoutFooter = {
   props: {

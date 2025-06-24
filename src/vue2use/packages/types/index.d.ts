@@ -9,12 +9,12 @@ import { Component, AsyncComponent } from 'vue/types/umd';
 import { ComponentOptions, PropsDefinition } from 'vue/types/options';
 import { ComponentOptionsMixin } from 'vue/types/v3-component-options';
 
-declare const enum TrackOpTypes {
+declare enum TrackOpTypes {
     GET = "get",
     ITERATE = "iterate",
     HAS = "has"
 }
-declare const enum TriggerOpTypes {
+declare enum TriggerOpTypes {
     SET = "set",
     ADD = "add",
     DELETE = "delete",
@@ -63,41 +63,6 @@ declare class Dep {
 declare function track(target: object, type: TrackOpTypes, key: any): void;
 declare function trigger(target: object, type: TriggerOpTypes, key: any, newValue?: any, oldValue?: any): void;
 
-declare class RefImplCommon implements Target {
-    readonly [ReactiveFlags.IS_SHALLOW]: boolean;
-    readonly [ReactiveFlags.IS_REF] = true;
-    constructor(shallow?: boolean);
-}
-declare class RefImpl<T, S = T> extends RefImplCommon {
-    _rawValue: any;
-    _value: any;
-    constructor(value?: T, shallow?: boolean);
-    get value(): T;
-    set value(v: S);
-    get dep(): Dep | void;
-}
-declare class ObjectRefImpl<T extends any, K extends keyof T> extends RefImplCommon {
-    _object: T;
-    _key: K;
-    _value: K extends keyof T ? T[K] : any;
-    _defaultValue: any;
-    constructor(object: T, key: K, defaultValue?: any, shallow?: boolean);
-    get value(): K extends keyof T ? T[K] : any;
-    set value(v: K extends keyof T ? T[K] : any);
-}
-type CustomRefFactory<T> = (track: () => void, trigger: (a?: T, b?: T | void) => void) => {
-    get: () => T;
-    set: (value: T) => void;
-};
-declare class CustomRef<T> extends RefImplCommon {
-    _getter: ReturnType<CustomRefFactory<T>>["get"];
-    _setter: ReturnType<CustomRefFactory<T>>["set"];
-    constructor(factory: CustomRefFactory<T>);
-    get dep(): Dep | void;
-    get value(): T;
-    set value(v: T);
-}
-
 declare class Watcher implements DepTarget {
     vm?: ComponentInstance | null | void;
     cb: Function | null;
@@ -132,6 +97,101 @@ interface WatcherOptions extends DebuggerOptions {
     sync?: boolean;
     before?: Function;
 }
+declare function getCurrentWatcher(): Watcher | null;
+
+type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
+
+declare const RefSymbol: unique symbol;
+declare const RawSymbol: unique symbol;
+interface Ref<T = any, S = T> {
+    get value(): T;
+    set value(_: S);
+    dep: Dep | void;
+    [RefSymbol]: true;
+}
+type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>;
+type ToRefs<T = any> = {
+    [K in keyof T]: ToRef<T[K]>;
+};
+declare const ShallowRefMarker: unique symbol;
+type ShallowRef<T = any, S = T> = Ref<T, S> & {
+    [ShallowRefMarker]?: true;
+};
+type MaybeRef<T = any> = T | Ref<T> | ShallowRef<T> | WritableComputedRef<T>;
+type MaybeRefOrGetter<T = any> = MaybeRef<T> | ComputedRef<T> | (() => T);
+declare class RefImplCommon implements Target {
+    readonly [ReactiveFlags.IS_SHALLOW]: boolean;
+    readonly [ReactiveFlags.IS_REF] = true;
+    constructor(shallow?: boolean);
+}
+declare class RefImpl<T, S = T> extends RefImplCommon {
+    _rawValue: any;
+    _value: any;
+    constructor(value?: T, shallow?: boolean);
+    get value(): T;
+    set value(v: S);
+    get dep(): Dep | void;
+}
+type CustomRefFactory<T> = (track: () => void, trigger: (newVal?: T, oldValue?: T | void) => void) => {
+    get: () => T;
+    set: (value: T) => void;
+};
+declare function shallowRef<T>(value: T): RefImpl<T>;
+declare function customRef<T>(factory: CustomRefFactory<T>): Ref<T>;
+declare function isRef<T>(target: Ref<T> | unknown): target is Ref<T>;
+declare function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T;
+declare function triggerRef(ref2: Ref): void;
+interface RefUnwrapBailTypes {
+}
+type ShallowUnwrapRef<T> = {
+    [K in keyof T]: DistributeRef<T[K]>;
+};
+type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T;
+type UnwrapRef<T> = T extends ShallowRef<infer V, unknown> ? V : T extends Ref<infer V, unknown> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>;
+type UnwrapRefSimple<T> = T extends Builtin | Ref | RefUnwrapBailTypes[keyof RefUnwrapBailTypes] | {
+    [RawSymbol]?: true;
+} ? T : T extends Map<infer K, infer V> ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>> : T extends WeakMap<infer K, infer V> ? WeakMap<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof WeakMap<any, any>>> : T extends Set<infer V> ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>> : T extends WeakSet<infer V> ? WeakSet<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof WeakSet<any>>> : T extends ReadonlyArray<any> ? {
+    [K in keyof T]: UnwrapRefSimple<T[K]>;
+} : T extends object & {
+    [ShallowReactiveMarker]?: never;
+} ? {
+    [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>;
+} : T;
+declare function toRef<T>(value: T): T extends () => infer R ? Readonly<Ref<R>> : T extends Ref ? T : Ref<UnwrapRef<T>>;
+declare function toRef<T extends object, K extends keyof T>(object: T, key: K): ToRef<T[K]>;
+declare function toRef<T extends object, K extends keyof T>(object: T, key: K, defaultValue: T[K]): ToRef<Exclude<T[K], undefined>>;
+declare function toRefs<T extends object>(target: T): ToRefs<T>;
+declare function ref<T>(target?: T): Ref<T>;
+declare function toValue<T>(source: MaybeRefOrGetter<T>): T;
+
+interface Target {
+    [ReactiveFlags.SKIP]?: boolean;
+    [ReactiveFlags.IS_REACTIVE]?: boolean;
+    [ReactiveFlags.IS_READONLY]?: boolean;
+    [ReactiveFlags.IS_SHALLOW]?: boolean;
+    [ReactiveFlags.RAW]?: any;
+}
+type Primitive = string | number | boolean | bigint | symbol | undefined | null;
+type Builtin = Primitive | Function | Date | Error | RegExp;
+declare const ShallowReactiveMarker: unique symbol;
+type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>;
+type DeepReadonly<T> = T extends Builtin ? T : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>> : T extends ReadonlyMap<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>> : T extends WeakMap<infer K, infer V> ? WeakMap<DeepReadonly<K>, DeepReadonly<V>> : T extends Set<infer U> ? ReadonlySet<DeepReadonly<U>> : T extends ReadonlySet<infer U> ? ReadonlySet<DeepReadonly<U>> : T extends WeakSet<infer U> ? WeakSet<DeepReadonly<U>> : T extends Promise<infer U> ? Promise<DeepReadonly<U>> : T extends Ref<infer U, unknown> ? Readonly<Ref<DeepReadonly<U>>> : T extends {} ? {
+    readonly [K in keyof T]: DeepReadonly<T[K]>;
+} : Readonly<T>;
+declare const toReactive: <T extends unknown>(a: T) => T;
+declare const toReadonly: <T extends unknown>(a: T) => T;
+declare const toShallow: <T extends unknown>(a: T) => T;
+declare function toRaw<T>(observed: T): T;
+declare function isReactive(value: any): boolean;
+declare function isReadonly(value: any): boolean;
+declare function isShallow(value: any): boolean;
+declare function isProxy(value: any): boolean;
+declare function markRaw<T extends object>(value: T): T;
+declare function reactive<T extends object>(target: T): T;
+declare function shallowReactive<T extends object>(target: T): T;
+declare function readonly<T extends object>(target: T): DeepReadonly<UnwrapNestedRefs<T>>;
+declare function shallowReadonly<T extends object>(target: T): T;
+declare function proxyRefs<T>(objectWithRefs: T): T;
 
 declare const ComputedRefSymbol: unique symbol;
 declare const WritableComputedRefSymbol: unique symbol;
@@ -151,55 +211,23 @@ interface WritableComputedOptions<T, S = T> {
     get: ComputedGetter<T>;
     set: ComputedSetter<S>;
 }
+type ComputedTarget = Target & Record<any, any> & DebuggerOptions;
+declare class ComputedRefImpl<T> implements ComputedTarget {
+    private getter;
+    private setter;
+    readonly effect: Watcher;
+    private _value;
+    readonly [ReactiveFlags.IS_READONLY]: boolean;
+    readonly [ReactiveFlags.IS_REF] = true;
+    onTrack?: (event: DebuggerEvent) => void;
+    onTrigger?: (event: DebuggerEvent) => void;
+    constructor(getter: ComputedGetter<T>, setter: ComputedSetter<T> | void, vm?: ComponentInstance);
+    get value(): T;
+    set value(newValue: T);
+    get dep(): Dep | void;
+}
 declare function computed<T>(getter: ComputedGetter<T>, debugOptions?: DebuggerOptions): ComputedRef<T>;
 declare function computed<T, S = T>(options: WritableComputedOptions<T, S>, debugOptions?: DebuggerOptions): WritableComputedRef<T, S>;
-
-interface Target {
-    [ReactiveFlags.SKIP]?: boolean;
-    [ReactiveFlags.IS_REACTIVE]?: boolean;
-    [ReactiveFlags.IS_READONLY]?: boolean;
-    [ReactiveFlags.IS_SHALLOW]?: boolean;
-    [ReactiveFlags.RAW]?: any;
-}
-declare const RefSymbol: unique symbol;
-interface Ref<T = any, S = T> {
-    get value(): T;
-    set value(_: S);
-    dep: Dep | void;
-    [RefSymbol]: true;
-}
-type ToRefs<T = any> = {
-    [K in keyof T]: ObjectRefImpl<T, K>;
-};
-declare const ShallowRefMarker: unique symbol;
-type ShallowRef<T = any, S = T> = Ref<T, S> & {
-    [ShallowRefMarker]?: true;
-};
-type MaybeRef<T = any> = T | Ref<T> | ShallowRef<T> | WritableComputedRef<T>;
-type MaybeRefOrGetter<T = any> = MaybeRef<T> | ComputedRef<T> | (() => T);
-declare const toReactive: <T extends unknown>(a: T) => T;
-declare const toReadonly: <T extends unknown>(a: T) => T;
-declare const toShallow: <T extends unknown>(a: T) => T;
-declare function toRaw<T>(observed: T): T;
-declare function shallowRef<T>(value: T): RefImpl<T>;
-declare function customRef<T>(factory: CustomRefFactory<T>): CustomRef<T>;
-declare function isRef<T>(target: Ref<T> | unknown): target is Ref<T>;
-declare function isReactive(value: any): boolean;
-declare function isReadonly(value: any): boolean;
-declare function isShallow(value: any): boolean;
-declare function isProxy(value: any): boolean;
-declare function markRaw<T extends object>(value: T): T;
-declare function reactive<T extends object>(target: T): T;
-declare function shallowReactive<T extends object>(target: T): T;
-declare function readonly<T extends object>(target: T): T;
-declare function shallowReadonly<T extends object>(target: T): T;
-declare function proxyRefs<T>(objectWithRefs: T): T;
-declare function unref<T>(ref2: MaybeRef<T> | ComputedRef<T>): T;
-declare function triggerRef(ref2: Ref): void;
-declare function toRef<T, K extends keyof T>(target: T, key: K, defaultValue?: any, shallow?: boolean): ObjectRefImpl<T, K>;
-declare function toRefs<T extends object>(target: T): ToRefs<T>;
-declare function ref<T>(target?: T): RefImpl<T>;
-declare function toValue<T>(target: MaybeRefOrGetter<T>): T;
 
 type OnCleanup = (cleanupFn: () => void) => void;
 type WatchEffect = (onCleanup: OnCleanup) => void;
@@ -218,6 +246,7 @@ type MapSources<T, Immediate> = {
     [K in keyof T]: T[K] extends WatchSource<infer V> ? Immediate extends true ? V | undefined : V : T[K] extends object ? Immediate extends true ? T[K] | undefined : T[K] : never;
 };
 type WatchStopHandle = () => void;
+declare function traverse(val: any, seen: Set<any>): void;
 declare function watch<T extends MultiWatchSources, Immediate extends Readonly<boolean> = false>(sources: [...T], cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>, options?: WatchOptions<Immediate>): WatchStopHandle;
 declare function watch<T extends Readonly<MultiWatchSources>, Immediate extends Readonly<boolean> = false>(source: T, cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>, options?: WatchOptions<Immediate>): WatchStopHandle;
 declare function watch<T, Immediate extends Readonly<boolean> = false>(source: WatchSource<T>, cb: WatchCallback<T, Immediate extends true ? T | undefined : T>, options?: WatchOptions<Immediate>): WatchStopHandle;
@@ -225,25 +254,16 @@ declare function watch<T extends object, Immediate extends Readonly<boolean> = f
 declare function watchEffect(effect: WatchEffect, options?: WatchOptionsBase): WatchStopHandle;
 declare function watchPostEffect(effect: WatchEffect, options?: DebuggerOptions): WatchStopHandle;
 declare function watchSyncEffect(effect: WatchEffect, options?: DebuggerOptions): WatchStopHandle;
+declare function onWatcherCleanup(cleanupFn: () => void, failSilently?: boolean, owner?: Watcher | undefined): void;
 
-type ObserverImplValueBase = (Record<any, any> | any[]) & {
-    [key: string | number | symbol]: any;
-};
-declare class ObserverImpl<T extends ObserverImplValueBase> {
+declare class Observer<T> {
     readonly value: T;
-    private readonly observer;
-    private readonly dep;
+    readonly shallow: boolean;
+    readonly mock: boolean;
+    vmCount: number;
     constructor(value: T, shallow?: boolean, mock?: boolean);
-    get<K extends keyof T>(key: K): T[K] extends ObserverImplValueBase ? ObserverImpl<T[K]> : T[K];
-    get(): T;
-    set<T>(key: string | symbol | number, value: any): this;
-    notify(info: DebuggerEventExtraInfo): this;
-    depend(info: DebuggerEventExtraInfo): this;
-    delete(key: string | string | number): this;
-    add(key: string | string | number, value: unknown): this;
-    replaceState<T2 extends T>(newValue: T2): void | this;
+    readonly dep: Dep;
 }
-declare function observer<T extends ObserverImplValueBase>(target: T): ObserverImpl<T>;
 
 declare class EffectScope {
     private detached;
@@ -260,6 +280,8 @@ declare class EffectScope {
     off(): void;
     stop(fromParent?: boolean): void;
 }
+declare function getCurrentScope(): EffectScope | null;
+declare function onScopeDispose(fn: () => void): void;
 
 declare const vm: ComponentInstance;
 
@@ -298,8 +320,8 @@ declare module "vue/types/vue" {
         _scope?: EffectScope;
     }
 }
-declare const effectScope: (vm2: ComponentInstance) => EffectScope;
-declare function effect(fn: () => any, scheduler?: (cb: any) => void): void;
+declare const effectScope: () => EffectScope;
+declare function effect(fn: () => any, scheduler?: (cb: Function) => void): void;
 
 declare enum SetupFlag {
     SETUPCOMPONENTREF = "_setup",
@@ -320,7 +342,7 @@ declare module "vue/types/vue" {
 declare function useSlots(): SetupContext["slots"];
 declare function useAttrs(): SetupContext["attrs"];
 declare function getContext(): SetupContext | undefined;
-declare function useModel<T extends Record<any, any>, K extends keyof T, T2 = T[K]>(props: T, name: K, options?: Readonly<any>): RefImpl<unknown, unknown> | CustomRef<T2>;
+declare function useModel<T extends Record<any, any>, K extends keyof T, T2 = T[K]>(props: T, name: K, options?: Readonly<any>): Ref<unknown, unknown>;
 declare function useCssVars(getter: (vm: Record<string, any>, setupProxy: Record<string, any>) => Record<string, string>): void;
 declare function defineComponent(options: ComponentOptions<ComponentInstance> | Function): void;
 
@@ -347,5 +369,5 @@ declare class Vue2Hooks {
     static install(vue: typeof vue__default): void;
 }
 
-export { CustomRef, Dep, EffectScope, ObjectRefImpl, ObserverImpl, RefImpl, Watcher, computed, customRef, Vue2Hooks as default, defineComponent, effect, effectScope, getContext, getCurrentInstance, h, inject, isProxy, isReactive, isReadonly, isRef, isShallow, markRaw, nextTick, observer, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onErrorCaptured, onMounted, onRenderTracked, onRenderTriggered, onServerPrefetch, onUnmounted, onUpdated, provide, proxyRefs, reactive, readonly, ref, shallowReactive, shallowReadonly, shallowRef, toRaw, toReactive, toReadonly, toRef, toRefs, toShallow, toValue, track, trigger, triggerRef, unref, useAttrs, useCssVars, useModel, useSlots, watch, watchEffect, watchPostEffect, watchSyncEffect };
-export type { ComputedGetter, ComputedRef, ComputedSetter, CustomRefFactory, ErrorCapturedHook, MaybeRef, MaybeRefOrGetter, Ref, ShallowRef, Target, ToRefs, WritableComputedOptions, WritableComputedRef };
+export { ComputedRefImpl, Dep, EffectScope, Observer, RawSymbol, ReactiveFlags, ShallowReactiveMarker, TrackOpTypes, TriggerOpTypes, Watcher, computed, customRef, Vue2Hooks as default, defineComponent, effect, effectScope, getContext, getCurrentInstance, getCurrentScope, getCurrentWatcher, h, inject, isProxy, isReactive, isReadonly, isRef, isShallow, markRaw, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onErrorCaptured, onMounted, onRenderTracked, onRenderTriggered, onScopeDispose, onServerPrefetch, onUnmounted, onUpdated, onWatcherCleanup, provide, proxyRefs, reactive, readonly, ref, shallowReactive, shallowReadonly, shallowRef, toRaw, toReactive, toReadonly, toRef, toRefs, toShallow, toValue, track, traverse, trigger, triggerRef, unref, useAttrs, useCssVars, useModel, useSlots, watch, watchEffect, watchPostEffect, watchSyncEffect };
+export type { Builtin, ComputedGetter, ComputedRef, ComputedSetter, CustomRefFactory, DeepReadonly, DepTarget, ErrorCapturedHook, MaybeRef, MaybeRefOrGetter, OnCleanup, Ref, RefUnwrapBailTypes, ShallowRef, ShallowUnwrapRef, Target, ToRef, ToRefs, UnwrapNestedRefs, UnwrapRef, UnwrapRefSimple, WatchCallback, WatchEffect, WatchOptions, WatchSource, WatchStopHandle, WatcherOptions, WritableComputedOptions, WritableComputedRef };

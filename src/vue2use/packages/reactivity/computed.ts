@@ -2,11 +2,12 @@ import { hasChanged, isFunction, NOOP } from "./shared";
 import { Dep, getTargetReactiveProxyDeps, trackRefValue } from "./dep";
 import { Watcher, Watcher as Effect } from "./effect";
 import warn from "./warning";
-import { Ref, Target } from "./reactive";
+import { Target } from "./reactive";
 import { DebuggerEvent, DebuggerOptions } from "./debug";
 import type { ComponentInstance } from "vue/types/index";
 import { ReactiveFlags, TriggerOpTypes } from "./operations";
 import { currentInstance } from "../hooks/currentInstance";
+import { Ref } from "./ref";
 
 declare const ComputedRefSymbol: unique symbol;
 declare const WritableComputedRefSymbol: unique symbol;
@@ -34,7 +35,7 @@ export interface WritableComputedOptions<T, S = T> {
 
 type ComputedTarget = Target & Record<any, any> & DebuggerOptions;
 
-class ComputedRefImpl<T> implements ComputedTarget {
+export class ComputedRefImpl<T> implements ComputedTarget {
   readonly effect: Watcher;
   private _value: any;
   readonly [ReactiveFlags.IS_READONLY]: boolean;

@@ -40,6 +40,12 @@ export default [
         exports: "named",
       },
       {
+        file: "./packages/dist/vue2use.esm.prod.js",
+        format: "es",
+        exports: "named",
+        plugins: [terser()],
+      },
+      {
         file: "./packages/dist/vue2use.js",
         format: "iife",
         name: "Vue2use",

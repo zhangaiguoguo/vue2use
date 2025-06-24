@@ -13,7 +13,6 @@ import { track, trigger } from "./dep";
 import warn from "./warning";
 import {
   isReadonly,
-  isRef,
   isShallow,
   reactive,
   readonly,
@@ -21,6 +20,7 @@ import {
   toRaw,
 } from "./reactive";
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from "./operations";
+import { isRef } from "./ref";
 
 const reactiveProxyMap: WeakMap<object, object> = new WeakMap();
 

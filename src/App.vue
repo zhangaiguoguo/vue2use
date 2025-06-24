@@ -34,7 +34,7 @@
 <template>
   <div id="app">
     <transition-group name="slide-fade" appear>
-      <div v-for="(item, index) in arr.get()" :key="index">
+      <div v-for="(item, index) in arr" :key="index">
         <h1>{{ item }}</h1>
         <button @click="arr.set(index, item + 1)">点击</button>
         <Component v-if="item % 2" :is="ExposeRef" ref="exposeRefs3" />
@@ -48,12 +48,12 @@
     </transition-group>
     <div>
       <br />
-      <button @click="arr.get().push(arr.get().length + 1)">arr 新增</button>
-      <button @click="arr.get().pop()">arr 后删</button>
+      <button @click="arr.push(arr.length + 1)">arr 新增</button>
+      <button @click="arr.pop()">arr 后删</button>
     </div>
     <ExposeRef
       ref="exposeRefs2"
-      :a="arr.get('length') + numComputed"
+      :a="arr.length + numComputed"
       :num="numComputed"
       :numComputed="numComputed"
     />
@@ -80,8 +80,7 @@ import {
   getCurrentInstance,
   h,
   inject,
-  observer,
-  ObserverImpl,
+  Observer,
   provide,
   reactive,
   readonly,
@@ -105,7 +104,7 @@ export default {
     window.vm = this;
   },
   setup(props, context) {
-    const arr = observer([]);
+    const arr = reactive([]);
     const exposeRefs = ref(null);
     const num = ref(0);
     const numComputed = computed({

@@ -168,6 +168,10 @@ const hyphenate: (str: string) => any = cacheStringFunction((str: string) =>
   str.replace(hyphenateRE, "-$1").toLowerCase()
 );
 
+type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
+
+export type { IfAny };
+
 export {
   camelize,
   hyphenate,

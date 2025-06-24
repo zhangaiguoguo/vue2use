@@ -82,10 +82,19 @@ class EffectScope {
   }
 }
 
+/**
+ * Returns the current active effect scope if there is one.
+ */
 function getCurrentScope(): EffectScope | null {
   return activeEffectScope;
 }
 
+/**
+ * Registers a dispose callback on the current active effect scope. The
+ * callback will be invoked when the associated effect scope is stopped.
+ *
+ * @param fn - The callback function to attach to the scope's cleanup.
+ */
 function onScopeDispose(fn: () => void): void {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn);
