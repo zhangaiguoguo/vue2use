@@ -97,7 +97,6 @@ interface WatcherOptions extends DebuggerOptions {
     sync?: boolean;
     before?: Function;
 }
-declare function getCurrentWatcher(): Watcher | null;
 
 type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N;
 
@@ -253,8 +252,35 @@ declare function watch<T, Immediate extends Readonly<boolean> = false>(source: W
 declare function watch<T extends object, Immediate extends Readonly<boolean> = false>(source: T, cb: WatchCallback<T, Immediate extends true ? T | undefined : T>, options?: WatchOptions<Immediate>): WatchStopHandle;
 declare function watchEffect(effect: WatchEffect, options?: WatchOptionsBase): WatchStopHandle;
 declare function watchPostEffect(effect: WatchEffect, options?: DebuggerOptions): WatchStopHandle;
+/**
+ * @example
+ *
+ *   watchSyncEffect(() => {
+ *      console.log("This will run synchronously");
+ *   },{
+ *    onTrack(e) {},
+ *    onTrigger(e) {},
+ *   });
+ *
+ *   var stop = watchSyncEffect(() => {
+ *      console.log("This will run synchronously");
+ *   });
+ *   stop()
+*/
 declare function watchSyncEffect(effect: WatchEffect, options?: DebuggerOptions): WatchStopHandle;
+/**
+ * Registers a cleanup callback on the current active effect. This
+ * registered cleanup callback will be invoked right before the
+ * associated effect re-runs.
+ *
+ * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ * @param owner - The effect that this cleanup function should be attached to.
+ * By default, the current active effect.
+ */
 declare function onWatcherCleanup(cleanupFn: () => void, failSilently?: boolean, owner?: Watcher | undefined): void;
+declare function getCurrentWatcher(): Watcher | null;
 
 declare class Observer<T> {
     readonly value: T;
@@ -280,7 +306,16 @@ declare class EffectScope {
     off(): void;
     stop(fromParent?: boolean): void;
 }
+/**
+ * Returns the current active effect scope if there is one.
+ */
 declare function getCurrentScope(): EffectScope | null;
+/**
+ * Registers a dispose callback on the current active effect scope. The
+ * callback will be invoked when the associated effect scope is stopped.
+ *
+ * @param fn - The callback function to attach to the scope's cleanup.
+ */
 declare function onScopeDispose(fn: () => void): void;
 
 declare const vm: ComponentInstance;
@@ -320,6 +355,13 @@ declare module "vue/types/vue" {
         _scope?: EffectScope;
     }
 }
+/**
+ * Creates an effect scope object which can capture the reactive effects (i.e.
+ * computed and watchers) created within it so that these effects can be
+ * disposed together. For detailed use cases of this API, please consult its
+ *
+ * @param detached - Can be used to create a "detached" effect scope.
+ */
 declare const effectScope: () => EffectScope;
 declare function effect(fn: () => any, scheduler?: (cb: Function) => void): void;
 

@@ -26,7 +26,8 @@
     },
     "declaration": true,
     "isolatedDeclarations": false,
-    "composite": true
+    "composite": true,
+    
   },
   "include": [
     "./packages/**/*.ts",

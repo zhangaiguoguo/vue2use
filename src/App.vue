@@ -36,7 +36,7 @@
     <transition-group name="slide-fade" appear>
       <div v-for="(item, index) in arr" :key="index">
         <h1>{{ item }}</h1>
-        <button @click="arr.set(index, item + 1)">点击</button>
+        <button @click="arr[index] = item + 1">点击</button>
         <Component v-if="item % 2" :is="ExposeRef" ref="exposeRefs3" />
         <ExposeRef ref="exposeRefs4" num="1" :obj="{}">
           <template #a>
@@ -78,9 +78,12 @@ import {
   Dep,
   effect,
   getCurrentInstance,
+  getCurrentWatcher,
   h,
   inject,
   Observer,
+  onUpdated,
+  onWatcherCleanup,
   provide,
   reactive,
   readonly,
@@ -90,9 +93,12 @@ import {
   shallowRef,
   toRaw,
   toValue,
+  watch,
+  watchEffect,
   Watcher,
 } from "@/vue2use";
 import ExposeRef from "@/components/ref/ExposeRef.vue";
+import { getCurrentInstance as getCurrentInstance2 } from "vue";
 
 export default {
   name: "App",
@@ -144,7 +150,21 @@ export default {
     provide("a", ref(1));
 
     // console.log(toRaw(obj));
-    
+
+    onUpdated(async () => {
+      console.log("onUpdated", getCurrentInstance()?.proxy);
+    });
+
+    watchEffect(() => {
+      watchEffect(() => {
+        console.log(getCurrentWatcher());
+        onWatcherCleanup(() => {
+          console.log("onWatcherCleanup");
+        })
+      });
+      console.log(getCurrentWatcher());
+    });
+
     return {
       arr,
       exposeRefs,
@@ -162,6 +182,6 @@ export default {
   },
   watch: {},
   computed: {},
-  methods: {}
+  methods: {},
 };
 </script>

@@ -105,9 +105,9 @@ V2Watcher.prototype = new Proxy(v2WatcherPrototype, {
     switch (p) {
       case "get":
         return () => {
+          receiver.parent = activeEffect;
+          activeEffect = receiver;
           try {
-            receiver.parent = activeEffect;
-            activeEffect = receiver;
             const res = v2WatcherPrototype[p].call(receiver);
             if (activeEffectScope) {
               //@ts-ignore
@@ -131,10 +131,6 @@ interface WatcherOptions extends DebuggerOptions {
   before?: Function;
 }
 
-function getCurrentWatcher() {
-  return activeEffect;
-}
-
 export {
   activeEffect,
   resetScheduling,
@@ -143,6 +139,5 @@ export {
   pauseScheduling,
   queueEffectSchedulers,
   Watcher,
-  getCurrentWatcher,
   type WatcherOptions,
 };

@@ -5,6 +5,7 @@ export {
   watchSyncEffect,
   watchEffect,
   watchPostEffect,
+  getCurrentWatcher,
   type WatchOptions,
   type WatchStopHandle,
   type WatchEffect,
@@ -26,5 +27,5 @@ export * from "./reactive";
 export * from "./observe";
 export { EffectScope, onScopeDispose, getCurrentScope } from "./effectScope";
 export { track, trigger, Dep, type DepTarget } from "./dep";
-export { Watcher, getCurrentWatcher, type WatcherOptions } from "./effect";
+export { Watcher, type WatcherOptions } from "./effect";
 export type * from "./operations";

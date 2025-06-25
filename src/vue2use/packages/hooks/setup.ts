@@ -562,7 +562,7 @@ function patchVNodeRef(vm: ComponentInstance) {
             },
             get(fn, p, fn2) {
               switch (p) {
-                //低版本的vue ref不支持函数是用法
+                //低版本的vue ref不支持函数式用法
                 case "toString":
                   return () => oo.refFn.originRef;
               }
@@ -791,9 +791,9 @@ function initSetup(this: ComponentInstance) {
         if (isFunction(setupResult)) {
           $options.render = (...args: any[]) => {
             const prevInstance = getCurrentInstance();
+            setCurrentInstance(this);
             try {
-              setCurrentInstance(this);
-              callHooks(this, CallHooksFlag.SETUPRENDER);
+              callHooks(this, CallHooksFlag.SETUPRENDER, ...args);
               //@ts-ignore
               return setupResult.call(this, ...args);
             } finally {

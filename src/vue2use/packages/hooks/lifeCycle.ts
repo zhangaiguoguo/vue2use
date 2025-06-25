@@ -1,5 +1,5 @@
 import Vue from "vue";
-import { currentInstance } from "./currentInstance";
+import { currentInstance, setCurrentInstance } from "./currentInstance";
 import { isArray } from "../shared";
 import type { ComponentInstance } from "vue/types/index";
 
@@ -8,11 +8,22 @@ function patchInjectVmLifeCycleHooksCaches(
   key: string,
   fn: () => void
 ) {
+  const callback = () => {
+    let previousInstance = currentInstance;
+    setCurrentInstance(instance);
+    try {
+      return fn();
+    } catch (e) {
+      Vue.util.warn(`instanceLifeCycleHook: ${e}`, instance as any);
+    } finally {
+      setCurrentInstance(previousInstance);
+    }
+  };
   const o = (instance.$options as any)[key];
   if (isArray(o)) {
-    o.push(fn);
+    o.push(callback);
   } else {
-    (instance.$options as any)[key] = o ? [o, fn] : [fn];
+    (instance.$options as any)[key] = o ? [o, callback] : [callback];
   }
 }
 

@@ -35,6 +35,12 @@ export default [
         exports: "named",
       },
       {
+        file: "./packages/dist/vue2use.cjs.prod.js",
+        format: "cjs",
+        exports: "named",
+        plugins: [terser()],
+      },
+      {
         file: "./packages/dist/vue2use.esm.js",
         format: "es",
         exports: "named",
@@ -46,13 +52,13 @@ export default [
         plugins: [terser()],
       },
       {
-        file: "./packages/dist/vue2use.js",
+        file: "./packages/dist/vue2use.global.js",
         format: "iife",
         name: "Vue2use",
         exports: "named",
       },
       {
-        file: "./packages/dist/vue2use.min.js",
+        file: "./packages/dist/vue2use.global.prod.js",
         format: "iife",
         name: "Vue2use",
         exports: "named",

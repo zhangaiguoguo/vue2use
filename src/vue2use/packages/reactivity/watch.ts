@@ -9,7 +9,11 @@ import {
 } from "./shared";
 import warn from "./warning";
 import { isReactive, isShallow, toRaw } from "./reactive";
-import { activeEffect, Watcher as Effect, Watcher } from "./effect";
+import {
+  Watcher as Effect,
+  Watcher,
+  activeEffect as activeEffect2,
+} from "./effect";
 import config from "../vueConfig";
 import { Dep } from "./dep";
 import { nextTick } from "../hooks/nextTick";
@@ -66,6 +70,7 @@ let circular: Record<number, number> = {};
 let waiting = false;
 let flushing = false;
 let index = 0;
+let activeEffect: null | Watcher = null;
 
 function resetSchedulerState() {
   index = queue.length = 0;
@@ -303,29 +308,36 @@ function doWatch(
     if (!watcher.active) {
       return;
     }
-    if (cb) {
-      const newValue = watcher.get();
-      if (
-        deep ||
-        forceTrigger ||
-        (isMultiSource
-          ? (newValue as any[]).some(function (v, i) {
-              return hasChanged(v, (oldValue as any[])[i]);
-            })
-          : hasChanged(newValue, oldValue))
-      ) {
-        if (cleanup) {
-          cleanup();
+    const prevActiveEffect = activeEffect;
+    activeEffect = watcher;
+    (watcher as any).parent = prevActiveEffect;
+    try {
+      if (cb) {
+        const newValue = watcher.get();
+        if (
+          deep ||
+          forceTrigger ||
+          (isMultiSource
+            ? (newValue as any[]).some(function (v, i) {
+                return hasChanged(v, (oldValue as any[])[i]);
+              })
+            : hasChanged(newValue, oldValue))
+        ) {
+          if (cleanup) {
+            cleanup();
+          }
+          call(cb, null, [
+            newValue,
+            oldValue === null ? undefined : oldValue,
+            onCleanup,
+          ]);
+          oldValue = newValue;
         }
-        call(cb, null, [
-          newValue,
-          oldValue === null ? undefined : oldValue,
-          onCleanup,
-        ]);
-        oldValue = newValue;
+      } else {
+        watcher.get();
       }
-    } else {
-      watcher.get();
+    } finally {
+      activeEffect = prevActiveEffect;
     }
   };
   if (flush === "sync") {
@@ -469,6 +481,21 @@ export function watchPostEffect(
   return doWatch(effect, null, { ...options, flush: "post" });
 }
 
+/**
+ * @example
+ * 
+ *   watchSyncEffect(() => {
+ *      console.log("This will run synchronously");
+ *   },{
+ *    onTrack(e) {},
+ *    onTrigger(e) {},
+ *   });
+ * 
+ *   var stop = watchSyncEffect(() => {
+ *      console.log("This will run synchronously");
+ *   });
+ *   stop()
+*/
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions
@@ -495,7 +522,7 @@ const cleanupMap: WeakMap<Watcher, (() => void)[]> = new WeakMap();
 export function onWatcherCleanup(
   cleanupFn: () => void,
   failSilently = false,
-  owner: Watcher | undefined = activeEffect as Watcher
+  owner: Watcher | undefined = (activeEffect || activeEffect2) as Watcher
 ): void {
   if (owner) {
     let cleanups = cleanupMap.get(owner);
@@ -507,4 +534,8 @@ export function onWatcherCleanup(
         ` to associate with.`
     );
   }
+}
+
+export function getCurrentWatcher() {
+  return activeEffect || activeEffect2;
 }

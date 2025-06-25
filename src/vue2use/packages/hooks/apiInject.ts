@@ -1,7 +1,7 @@
 import Vue from "vue";
 import type { ComponentInstance } from "vue/types/index";
 import { currentInstance } from "./currentInstance";
-import { isFunction } from "../shared";
+import { hasOwn, isFunction } from "../shared";
 
 interface InjectionKey<T> extends Symbol {}
 
@@ -56,10 +56,20 @@ export function inject(
   const instance = currentInstance;
   if (instance) {
     //@ts-ignore
-    const provides = instance.$parent && instance.$parent._provided;
+    let provides = null;
+    let source = instance.$parent;
+    while (source) {
+      let _provides = provides;
+      //@ts-ignore
+      if ((_provides = source._provided) && hasOwn(_provides, key)) {
+        provides = _provides;
+        break;
+      }
+      source = source.$parent;
+    }
     //@ts-ignore
     if (provides && key in provides) {
-      return provides[key];
+      return provides[key as any];
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
         ? defaultValue.call(instance)
