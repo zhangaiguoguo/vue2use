@@ -35,7 +35,7 @@
     配合构建工具（如 webpack）使用，设置 target: 'node' 并正确外部化 Vue 依赖。
 # 总结：
 
-    直接浏览器使用：选择 `vue2use.global.js` 原生 ES 模块：选择 `vue2use.esm.js`服务端渲染：选择 v`ue2use.cjs.js`。
+    直接浏览器使用：选择 `vue2use.global.js` 原生 ES 模块：选择 `vue2use.esm.js`服务端渲染：选择 `vue2use.cjs.js`。
 
 
 生产环境中，请务必使用预压缩的生产版文件（以 .prod.js 结尾），以获得更好的性能和更小的文件体积。
