@@ -1,6 +1,6 @@
 {
   "name": "vue2use",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "vue2use",
   "main": "main.ts",
   "module": "dist/vue2use.esm.js",
@@ -10,8 +10,7 @@
   "files": [
     "dist",
     "types",
-    "index.js",
-    "REMARK.md"
+    "index.js"
   ],
   "exports": {
     ".": {
