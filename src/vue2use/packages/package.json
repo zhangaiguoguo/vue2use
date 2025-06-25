@@ -1,16 +1,17 @@
 {
   "name": "vue2use",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "vue2use",
   "main": "main.ts",
   "module": "dist/vue2use.esm.js",
   "types": "types/index.d.ts",
-  "unpkg": "dist/vue2use.global.min.js",
-  "jsdelivr": "dist/vue2use.global.min.js",
+  "unpkg": "dist/vue2use.global.prod.js",
+  "jsdelivr": "dist/vue2use.global.prod.js",
   "files": [
     "dist",
     "types",
-    "index.js"
+    "index.js",
+    "REMARK.md"
   ],
   "exports": {
     ".": {
