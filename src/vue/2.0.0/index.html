@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="https://unpkg.com/vue@2.2.0/dist/vue.js"></script>
+    <script src="https://unpkg.com/vue@2.0.8/dist/vue.js"></script>
   </head>
   <body>
     <div id="app">
@@ -13,17 +13,18 @@
         :num="num"
         ref="abRef"
         :n="num"
+        :n2="num * 2"
         @click.native.self="num++"
         @update:n="num=$event"
       >
         <template scope="{n}">
-          <div>slot - {{n}}</div>
+          <div>slot - {{n}} 22</div>
         </template>
         <template slot="a" scope="{n}">
-          <div>slot - {{n}}</div>
+          <div>slot - {{n}} 11</div>
         </template>
         <template slot="ab">
-          <div>slot  ab</div>
+          <div>slot ab</div>
         </template>
       </ab>
     </div>
@@ -45,7 +46,8 @@
       provide,
       useCssVars,
       useModel,
-      watchEffect
+      watchEffect,
+      getCurrentWatcher,
     } = Vue2use;
 
     Vue.use(Vue2Hooks);
@@ -63,6 +65,7 @@
         });
         watchEffect(() => {
           console.log(slots.default, "slots");
+          console.log(getCurrentWatcher());
         });
 
         const a = inject("a");
@@ -147,8 +150,8 @@
                 attrs:
                   toValue(num) % 2
                     ? {
-                        num: toValue(num),
-                        n: toValue(num),
+                        num: toValue(num) * 2,
+                        nc: toValue(num),
                       }
                     : {
                         num: toValue(num),
@@ -156,6 +159,33 @@
                 ref: "abc",
                 on: {
                   "update:n": (v) => (num.value = v),
+                },
+                props: {
+                  n: toValue(num),
+                },
+                scopedSlots: {
+                  default:
+                    num.value % 2
+                      ? ({ n }) =>
+                          h(
+                            "div",
+                            null,
+                            "slot - " + n + " xxxx default -slotScope"
+                          )
+                      : ({ n }) =>
+                          h(
+                            "div",
+                            null,
+                            "slot - " + n + " default else -slotScope"
+                          ),
+                  a: ({ n }) => h("div", null, "slot - " + n + " 11"),
+                  ab: () => h("div", null, "slot ab"),
+                },
+                slots: {
+                  default:
+                    num.value % 2
+                      ? h("div", null, "slot - " + 1 + " xxxx default -slot")
+                      : h("div", null, "slot - " + 2 + " default else -slot"),
                 },
               }),
             ]);

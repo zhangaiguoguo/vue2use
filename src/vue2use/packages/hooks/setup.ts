@@ -20,7 +20,6 @@ import {
   hasChanged,
   isFunction,
   isObject,
-  NOOP,
   getOwnPropertyDescriptor,
   removeArrayItem,
   isArray,
@@ -33,11 +32,6 @@ import {
   isObject2,
 } from "../shared";
 import { onBeforeMount, onUnmounted } from "./lifeCycle";
-import {
-  callHooks,
-  clearVmCallHooks,
-  injectVmCallHook,
-} from "./vmCallHooksCaches";
 import {
   currentInstance,
   getCurrentInstance,
@@ -61,9 +55,8 @@ enum ComponentInstanceAttrFlag {
 }
 
 enum CallHooksFlag {
-  INSTANCEOPTIONSVNODEUPDATE = "instanceOptionsParentVnodeUpdate",
+  INSTANCEOPTIONSVNODEUPDATE = "_parentVnode",
   SETUPRENDER = "setupRender",
-  INSTANCEOPTIONSPROPSDATAUPDATE = "instanceOptionsPropsDataUpdate",
 }
 
 enum VmOptionsItem {
@@ -93,6 +86,19 @@ export interface SetupContext {
 interface PatchVNodeRefPrevRecordCachesItem {
   node: VNode;
   refFn: Function & { originRef?: any };
+}
+
+enum DefineInstanceOptionsProxyCallHooksNames {
+  GET = "get",
+  SET = "set",
+}
+
+interface DefineInstanceOptionsProxyCallHooksCacheContext {
+  proxy: ComponentInstance["$options"];
+  hooks: Record<
+    DefineInstanceOptionsProxyCallHooksNames,
+    Record<string, Function[]>
+  >;
 }
 
 declare module "vue/types/vue" {
@@ -154,43 +160,153 @@ function patchObjectBoth(
   return obj2;
 }
 
-function defineVmOptionsProxy<T extends Record<any, any>>(
-  options: T,
-  get: (target: T, key: any, receiver: T) => void,
-  set: (target: T, key: any, value: unknown, receiver: T) => void
-) {
-  let l: T;
-  return (l = new Proxy(options, {
-    get(target, key, receiver) {
-      get && get(target, key, receiver);
-      if (key === ReactiveFlags.RAW) {
-        return options;
+const defineInstanceOptionsProxyCallHooksCaches = new WeakMap<
+  ComponentInstance["$options"],
+  DefineInstanceOptionsProxyCallHooksCacheContext
+>();
+
+const injectInstanceOptionsProxyCallHook = (
+  options: ComponentInstance["$options"],
+  type: DefineInstanceOptionsProxyCallHooksNames,
+  key: string,
+  fn: Function
+) => {
+  options = (options as any)[ReactiveFlags.RAW] || options;
+  const o = defineInstanceOptionsProxyCallHooksCaches.get(options);
+  if (o) {
+    o.hooks[type][key] ??= [];
+    o.hooks[type][key].push(fn);
+  }
+};
+
+const callInstanceOptionsProxyCallHooks = (
+  options: ComponentInstance["$options"],
+  type: DefineInstanceOptionsProxyCallHooksNames,
+  key: string,
+  ...args: any[]
+) => {
+  options = (options as any)[ReactiveFlags.RAW] || options;
+  const o = defineInstanceOptionsProxyCallHooksCaches.get(options);
+  if (o && o.hooks[type][key]) {
+    o.hooks[type][key].forEach((hook) => {
+      if (isFunction(hook)) {
+        hook(...args);
+      } else {
+        Vue.util.warn(
+          `callInstanceOptionsProxyCallHooks: hook is not a function, key: ${key}, type: ${type}`
+        );
       }
-      return Reflect.get(target, key, receiver);
+    });
+  }
+};
+
+function defineInstanceOptionsProxy<T extends ComponentInstance["$options"]>(
+  options: T
+) {
+  if (defineInstanceOptionsProxyCallHooksCaches.has(options)) {
+    return defineInstanceOptionsProxyCallHooksCaches.get(options)!.proxy as T;
+  }
+  const o = {
+    proxy: new Proxy(options, {
+      get(target, key, receiver) {
+        if (key === ReactiveFlags.RAW) {
+          return options;
+        }
+        callInstanceOptionsProxyCallHooks(
+          options,
+          DefineInstanceOptionsProxyCallHooksNames.GET,
+          key as string
+        );
+        return Reflect.get(target, key, receiver);
+      },
+      set(target, key, value, receiver) {
+        Reflect.set(target, key, value, receiver);
+        callInstanceOptionsProxyCallHooks(
+          options,
+          DefineInstanceOptionsProxyCallHooksNames.SET,
+          key as string,
+          ...arguments
+        );
+        return true;
+      },
+      has(target, key) {
+        return Reflect.has(target, key);
+      },
+      ownKeys(target) {
+        return Reflect.ownKeys(target);
+      },
+      defineProperty(target, key, descriptor) {
+        return Reflect.defineProperty(target, key, descriptor);
+      },
+      deleteProperty(target, key) {
+        callInstanceOptionsProxyCallHooks(
+          options,
+          DefineInstanceOptionsProxyCallHooksNames.SET,
+          key as string
+        );
+        return Reflect.deleteProperty(target, key);
+      },
+    }),
+    hooks: {
+      [DefineInstanceOptionsProxyCallHooksNames.GET]: {},
+      [DefineInstanceOptionsProxyCallHooksNames.SET]: {},
     },
-    set(target, key, value, receiver) {
-      Reflect.set(target, key, value, receiver);
-      set && set(target, key, value, receiver);
-      return true;
-    },
-    has(target, key) {
-      return Reflect.has(target, key);
-    },
-    ownKeys(target) {
-      return Reflect.ownKeys(target);
-    },
-    defineProperty(target, key, descriptor) {
-      return Reflect.defineProperty(target, key, descriptor);
-    },
-    deleteProperty(target, key) {
-      set && set(target, key, void 0, l);
-      return Reflect.deleteProperty(target, key);
-    },
-  }));
+  };
+
+  defineInstanceOptionsProxyCallHooksCaches.set(options, o);
+
+  return o.proxy;
 }
 
-const getInstanceRootVnode = (instance: ComponentInstance) =>
-  (instance.$options as any)[VmOptionsItem.PARENTVNODE] as VNode;
+function initSetup(this: ComponentInstance) {
+  const $options = this.$options || {};
+  if (SetupFlag.SETUPCOMPONENTREF in $options) {
+    //@ts-ignore
+    const scope = (this._vue2SetupScope = new EffectScope(true));
+    //@ts-ignore
+    this._setupState = {};
+    //@ts-ignore
+    this._isSetupComponent = true;
+    scope.run(() => {
+      const setup = $options._setup;
+      if (isFunction(setup)) {
+        //@ts-ignore
+        this.$options = defineInstanceOptionsProxy($options);
+
+        const setupResult = setup.call(
+          { $createElement: h },
+          defineInstanceProps(),
+          getContext() as SetupContext
+        );
+
+        onUnmounted(() => {
+          defineInstanceOptionsProxyCallHooksCaches.delete($options);
+        });
+
+        if (isFunction(setupResult)) {
+          $options.render = (...args: any[]) => {
+            const prevInstance = getCurrentInstance();
+            setCurrentInstance(this);
+            try {
+              //@ts-ignore
+              return setupResult.call(this, ...args);
+            } finally {
+              setCurrentInstance(prevInstance?.proxy);
+            }
+          };
+        } else {
+          defineInstanceSetupState(setupResult);
+        }
+      } else {
+        Vue.util.warn(`setup option is not function`);
+      }
+    });
+
+    onUnmounted(() => {
+      scope.stop();
+    });
+  }
+}
 
 function defineInstanceSetupState(
   setupState: Record<string, any> | void,
@@ -232,6 +348,9 @@ function defineInstanceSetupState(
     }
   }
 }
+
+const getInstanceRootVnode = (instance: ComponentInstance) =>
+  (instance.$options as any)[VmOptionsItem.PARENTVNODE] as VNode;
 
 function createSetupContext(instance: ComponentInstance): SetupContext {
   const expose = (exposed?: Record<string, any>) => {
@@ -294,7 +413,12 @@ function defineInstanceAttrs(vm: ComponentInstance): SetupContext["attrs"] {
         trigger(vm, TriggerOpTypes.SET, ComponentInstanceAttrFlag.ATTRS);
       }
     };
-    injectVmCallHook(vm, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE, p);
+    injectInstanceOptionsProxyCallHook(
+      vm.$options,
+      DefineInstanceOptionsProxyCallHooksNames.SET,
+      CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE,
+      p
+    );
     p();
     //@ts-ignore
     vm.$attrs = attrs;
@@ -338,7 +462,7 @@ function defineInstanceAttrs(vm: ComponentInstance): SetupContext["attrs"] {
 }
 
 //兼容vue 2.0.0-alpha.1 ~ 2.1.0版本问题
-function defineInstanceSlots2(vm: ComponentInstance): SetupContext["attrs"] {
+function defineInstanceSlots2(vm: ComponentInstance): SetupContext["slots"] {
   //@ts-ignore
   let slots = {};
   const slots2 = new Proxy(slots, {
@@ -375,9 +499,9 @@ function defineInstanceSlots2(vm: ComponentInstance): SetupContext["attrs"] {
 }
 
 //兼容vue 2.1.0 ~ 2.2.0版本问题
-function defineInstanceSlots3(vm: ComponentInstance): SetupContext["attrs"] {
+function defineInstanceSlots3(vm: ComponentInstance): SetupContext["slots"] {
   //@ts-ignore
-  let slots = getInstanceRootVnode(vm).data?.scopedSlots || {};
+  let slots = getInstanceRootVnode(vm)?.data?.scopedSlots || {};
   const slots2 = new Proxy(slots, {
     get(target, key, receiver) {
       track(vm, TrackOpTypes.GET, ComponentInstanceAttrFlag.SLOTS);
@@ -391,7 +515,7 @@ function defineInstanceSlots3(vm: ComponentInstance): SetupContext["attrs"] {
   });
 
   const p = () => {
-    const scopedSlots = getInstanceRootVnode(vm).data?.scopedSlots;
+    const scopedSlots = getInstanceRootVnode(vm)?.data?.scopedSlots;
     if (scopedSlots !== slots) {
       let flag = 0;
       patchObjectBoth(scopedSlots as any, slots, (k) => {
@@ -401,9 +525,14 @@ function defineInstanceSlots3(vm: ComponentInstance): SetupContext["attrs"] {
       flag && trigger(vm, TriggerOpTypes.SET, ComponentInstanceAttrFlag.SLOTS);
     }
   };
-  injectVmCallHook(vm, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE, p);
+  injectInstanceOptionsProxyCallHook(
+    vm.$options,
+    DefineInstanceOptionsProxyCallHooksNames.SET,
+    CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE,
+    p
+  );
   p();
-  return slots2;
+  return slots2 as SetupContext["slots"];
 }
 
 function defineInstanceSlots(vm: ComponentInstance): SetupContext["slots"] {
@@ -413,7 +542,7 @@ function defineInstanceSlots(vm: ComponentInstance): SetupContext["slots"] {
   ) as TypedPropertyDescriptor<Record<string, VNode[]>>;
 
   if (!slotsPropertyDescriptor) {
-    const data = getInstanceRootVnode(vm).data;
+    const data = getInstanceRootVnode(vm)?.data;
     if (data && "scopedSlots" in data) {
       return defineInstanceSlots3(vm);
     } else {
@@ -427,7 +556,7 @@ function defineInstanceSlots(vm: ComponentInstance): SetupContext["slots"] {
   }
 
   //@ts-ignore
-  let scopedSlots = getInstanceRootVnode(vm).data?.scopedSlots || {};
+  let scopedSlots = getInstanceRootVnode(vm)?.data?.scopedSlots || {};
   const slots = new Proxy(scopedSlots, {
     get(target, key, receiver) {
       track(vm, TrackOpTypes.GET, ComponentInstanceAttrFlag.SLOTS);
@@ -452,10 +581,11 @@ function defineInstanceSlots(vm: ComponentInstance): SetupContext["slots"] {
       } else {
         $slots = value;
       }
+
       //@ts-ignore
-      let currentScopedSlots = vm.$options._parentVnode?.data?.scopedSlots;
+      let currentScopedSlots = getInstanceRootVnode(vm)?.data?.scopedSlots;
       if (currentScopedSlots !== scopedSlots) {
-        scopedSlots = currentScopedSlots;
+        scopedSlots = currentScopedSlots ?? {};
         patchObjectBoth(scopedSlots, slots);
       }
     },
@@ -585,13 +715,17 @@ function defineInstanceExpose(
   exposeState ??= {};
   //@ts-ignore
   instance._isExpose = true;
-
-  injectVmCallHook(instance, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE, () => {
-    //@ts-ignore
-    if (instance._isExpose) {
-      patchVNodeRef(instance);
+  injectInstanceOptionsProxyCallHook(
+    instance.$options,
+    DefineInstanceOptionsProxyCallHooksNames.SET,
+    CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE,
+    () => {
+      //@ts-ignore
+      if (instance._isExpose) {
+        patchVNodeRef(instance);
+      }
     }
-  });
+  );
 
   onBeforeMount(() => {
     patchVNodeRef(instance);
@@ -719,101 +853,26 @@ function defineInstanceProps(instance?: ComponentInstance) {
       propsData2: any = propsData,
       props = shallowReadonly(propsData);
 
-    // injectVmCallHook(
-    //   instance,
-    //   CallHooksFlag.INSTANCEOPTIONSPROPSDATAUPDATE,
-    //   () => {
-    //     const currentPropsData = instance.$options.propsData;
-    //     if (currentPropsData !== propsData2) {
-    //       propsData2 = currentPropsData;
-    //       patchObjectBoth(propsData2, propsData);
-    //     }
-    //   }
-    // );
-
-    //兼容vue低版本 $options propData 不会重新赋值
-    injectVmCallHook(instance, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE, () => {
-      //@ts-ignore
-      const currentComponentRootVnode = instance.$options._parentVnode as VNode;
-      if (currentComponentRootVnode) {
-        const componentOptions = currentComponentRootVnode.componentOptions;
-        if (componentOptions) {
-          if (componentOptions.propsData !== propsData2) {
-            propsData2 = componentOptions.propsData;
-            patchObjectBoth(propsData2, propsData);
+    injectInstanceOptionsProxyCallHook(
+      instance.$options,
+      DefineInstanceOptionsProxyCallHooksNames.SET,
+      CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE,
+      () => {
+        const currentComponentRootVnode = //@ts-ignore
+          instance.$options._parentVnode as VNode;
+        if (currentComponentRootVnode) {
+          const componentOptions = currentComponentRootVnode.componentOptions;
+          if (componentOptions) {
+            if (componentOptions.propsData !== propsData2) {
+              propsData2 = componentOptions.propsData;
+              patchObjectBoth(propsData2, propsData);
+            }
           }
         }
       }
-    });
+    );
 
     return props;
-  }
-}
-
-function initSetup(this: ComponentInstance) {
-  const $options = this.$options || {};
-  if (SetupFlag.SETUPCOMPONENTREF in $options) {
-    //@ts-ignore
-    const scope = (this._vue2SetupScope = new EffectScope(true));
-    //@ts-ignore
-    this._setupState = {};
-    //@ts-ignore
-    this._isSetupComponent = true;
-    scope.run(() => {
-      const setup = $options._setup;
-      if (isFunction(setup)) {
-        //@ts-ignore
-        this.$options = defineVmOptionsProxy(
-          $options,
-          NOOP,
-          (target: any, key: string, value: any) => {
-            switch (key) {
-              // case VmOptionsItem.PROPSDATA:
-              //   callHooks(this, CallHooksFlag.INSTANCEOPTIONSPROPSDATAUPDATE);
-              //   break;
-              case VmOptionsItem.PARENTVNODE:
-                callHooks(this, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE);
-                break;
-            }
-          }
-        );
-        const setupResult = setup.call(
-          { $createElement: h },
-          defineInstanceProps(),
-          getContext() as SetupContext
-        );
-
-        onUnmounted(() => {
-          clearVmCallHooks(this, CallHooksFlag.INSTANCEOPTIONSVNODEUPDATE);
-          clearVmCallHooks(this, CallHooksFlag.INSTANCEOPTIONSPROPSDATAUPDATE);
-        });
-
-        if (isFunction(setupResult)) {
-          $options.render = (...args: any[]) => {
-            const prevInstance = getCurrentInstance();
-            setCurrentInstance(this);
-            try {
-              callHooks(this, CallHooksFlag.SETUPRENDER, ...args);
-              //@ts-ignore
-              return setupResult.call(this, ...args);
-            } finally {
-              setCurrentInstance(prevInstance?.proxy);
-            }
-          };
-          onUnmounted(() => {
-            clearVmCallHooks(this, CallHooksFlag.SETUPRENDER);
-          });
-        } else {
-          defineInstanceSetupState(setupResult);
-        }
-      } else {
-        Vue.util.warn(`setup option is not function`);
-      }
-    });
-
-    onUnmounted(() => {
-      scope.stop();
-    });
   }
 }
 

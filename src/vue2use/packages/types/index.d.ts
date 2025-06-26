@@ -266,7 +266,7 @@ declare function watchPostEffect(effect: WatchEffect, options?: DebuggerOptions)
  *      console.log("This will run synchronously");
  *   });
  *   stop()
-*/
+ */
 declare function watchSyncEffect(effect: WatchEffect, options?: DebuggerOptions): WatchStopHandle;
 /**
  * Registers a cleanup callback on the current active effect. This

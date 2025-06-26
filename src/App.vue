@@ -69,6 +69,9 @@
     </div>
     <br />
     <div>set - size -> [{{ set.size }}]</div>
+    <div>
+      <A />
+    </div>
   </div>
 </template>
 
@@ -98,11 +101,29 @@ import {
   Watcher,
 } from "@/vue2use";
 import ExposeRef from "@/components/ref/ExposeRef.vue";
-import { getCurrentInstance as getCurrentInstance2 } from "vue";
+import {
+  getCurrentInstance as getCurrentInstance2,
+  defineAsyncComponent,
+} from "vue";
+
+const A = defineAsyncComponent({
+  loader: () =>
+    new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(import("@/components/ref/ExposeRef.vue"));
+      }, 1000);
+    }),
+  loadingComponent: {
+    setup() {
+      console.log(getCurrentInstance());
+      return () => h("div", "Loading...");
+    },
+  },
+});
 
 export default {
   name: "App",
-  components: { ExposeRef },
+  components: { ExposeRef, A },
   data() {
     return {};
   },
@@ -150,6 +171,11 @@ export default {
     provide("a", ref(1));
 
     // console.log(toRaw(obj));
+    watchEffect(() => {
+      console.log(set.value.size, "set length");
+    })
+
+    set.value.add(4);
 
     onUpdated(async () => {
       console.log("onUpdated", getCurrentInstance()?.proxy);
@@ -160,7 +186,7 @@ export default {
         console.log(getCurrentWatcher());
         onWatcherCleanup(() => {
           console.log("onWatcherCleanup");
-        })
+        });
       });
       console.log(getCurrentWatcher());
     });

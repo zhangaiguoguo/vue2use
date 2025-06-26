@@ -351,9 +351,22 @@ function doWatch(
     watcher.update = function () {
       //@ts-ignore
       if (instance && !instance._isMounted && instance !== vm) {
+        let runFlag = 0;
         //@ts-ignore
         const buffer = instance._preWatchers || (instance._preWatchers = []);
-        if (buffer.indexOf(watcher) < 0) buffer.push(watcher);
+        if (buffer.indexOf(watcher) < 0) {
+          buffer.push({
+            run() {
+              if (runFlag === 1) return;
+              runFlag = 1;
+              watcher.run();
+            },
+          });
+          queueWatcher({
+            run: buffer.at(-1)?.run,
+            before: watcher.before,
+          } as Watcher);
+        }
       } else {
         queueWatcher(watcher);
       }
@@ -483,19 +496,19 @@ export function watchPostEffect(
 
 /**
  * @example
- * 
+ *
  *   watchSyncEffect(() => {
  *      console.log("This will run synchronously");
  *   },{
  *    onTrack(e) {},
  *    onTrigger(e) {},
  *   });
- * 
+ *
  *   var stop = watchSyncEffect(() => {
  *      console.log("This will run synchronously");
  *   });
  *   stop()
-*/
+ */
 export function watchSyncEffect(
   effect: WatchEffect,
   options?: DebuggerOptions
