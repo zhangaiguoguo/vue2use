@@ -5,6 +5,7 @@ export { provide, inject } from "./hooks/apiInject";
 export { h } from "./hooks/h";
 export { getCurrentInstance } from "./hooks/currentInstance";
 export { effectScope, effect } from "./hooks/effect";
+export { useTemplateRef } from "./hooks/useTemplateRef";
 
 export {
   getContext,

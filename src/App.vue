@@ -70,7 +70,7 @@
     <br />
     <div>set - size -> [{{ set.size }}]</div>
     <div>
-      <A />
+      <A ref="aRef" v-for="item in 2" :key="item"/>
     </div>
   </div>
 </template>
@@ -98,7 +98,7 @@ import {
   toValue,
   watch,
   watchEffect,
-  Watcher,
+  Watcher,useTemplateRef
 } from "@/vue2use";
 import ExposeRef from "@/components/ref/ExposeRef.vue";
 import {
@@ -142,6 +142,7 @@ export default {
         num.value = v;
       },
     });
+    console.log(useTemplateRef("aRef"))
     const obj = reactive({
       a: 1,
       b: { a: 1, b: new Map([["a", { a: 1 }]]), c: new Set([1, 2, 3]) },

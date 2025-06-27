@@ -1,5 +1,5 @@
 const __v_cut_skip = "__v_cut_skip";
-const __isVue = "__isVue";
+const __isVue = "_isVue";
 const VUE2SETUP = "setup";
 const EMPTY_OBJ: Readonly<any> =
   process.env.NODE_ENV !== "production" ? Object.freeze({}) : {};

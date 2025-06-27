@@ -9,7 +9,7 @@
   <body>
     <div id="app">
       <button @click="num++">num - {{num}}</button>
-      <ab
+      <ab v-for="item in 2" :key="2"
         :num="num"
         ref="abRef"
         :n="num"
@@ -45,7 +45,8 @@
       provide,
       useCssVars,
       useModel,
-      watchEffect
+      watchEffect,
+      useTemplateRef,
     } = Vue2use;
 
     Vue.use(Vue2Hooks);
@@ -130,6 +131,8 @@
         effect(() => {
           num.value;
         });
+
+        console.log(useTemplateRef("abRef"), "useTemplateRef");
 
         return (
           {

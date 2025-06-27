@@ -365,6 +365,9 @@ declare module "vue/types/vue" {
 declare const effectScope: () => EffectScope;
 declare function effect(fn: () => any, scheduler?: (cb: Function) => void): void;
 
+type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>;
+declare function useTemplateRef<T = unknown, Keys extends string = string>(key: Keys): TemplateRef<T>;
+
 declare enum SetupFlag {
     SETUPCOMPONENTREF = "_setup",
     USERNATIVESETUP = "useNativeSetup"
@@ -411,5 +414,5 @@ declare class Vue2Hooks {
     static install(vue: typeof vue__default): void;
 }
 
-export { ComputedRefImpl, Dep, EffectScope, Observer, RawSymbol, ReactiveFlags, ShallowReactiveMarker, TrackOpTypes, TriggerOpTypes, Watcher, computed, customRef, Vue2Hooks as default, defineComponent, effect, effectScope, getContext, getCurrentInstance, getCurrentScope, getCurrentWatcher, h, inject, isProxy, isReactive, isReadonly, isRef, isShallow, markRaw, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onErrorCaptured, onMounted, onRenderTracked, onRenderTriggered, onScopeDispose, onServerPrefetch, onUnmounted, onUpdated, onWatcherCleanup, provide, proxyRefs, reactive, readonly, ref, shallowReactive, shallowReadonly, shallowRef, toRaw, toReactive, toReadonly, toRef, toRefs, toShallow, toValue, track, traverse, trigger, triggerRef, unref, useAttrs, useCssVars, useModel, useSlots, watch, watchEffect, watchPostEffect, watchSyncEffect };
+export { ComputedRefImpl, Dep, EffectScope, Observer, RawSymbol, ReactiveFlags, ShallowReactiveMarker, TrackOpTypes, TriggerOpTypes, Watcher, computed, customRef, Vue2Hooks as default, defineComponent, effect, effectScope, getContext, getCurrentInstance, getCurrentScope, getCurrentWatcher, h, inject, isProxy, isReactive, isReadonly, isRef, isShallow, markRaw, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onDeactivated, onErrorCaptured, onMounted, onRenderTracked, onRenderTriggered, onScopeDispose, onServerPrefetch, onUnmounted, onUpdated, onWatcherCleanup, provide, proxyRefs, reactive, readonly, ref, shallowReactive, shallowReadonly, shallowRef, toRaw, toReactive, toReadonly, toRef, toRefs, toShallow, toValue, track, traverse, trigger, triggerRef, unref, useAttrs, useCssVars, useModel, useSlots, useTemplateRef, watch, watchEffect, watchPostEffect, watchSyncEffect };
 export type { Builtin, ComputedGetter, ComputedRef, ComputedSetter, CustomRefFactory, DeepReadonly, DepTarget, ErrorCapturedHook, MaybeRef, MaybeRefOrGetter, OnCleanup, Ref, RefUnwrapBailTypes, ShallowRef, ShallowUnwrapRef, Target, ToRef, ToRefs, UnwrapNestedRefs, UnwrapRef, UnwrapRefSimple, WatchCallback, WatchEffect, WatchOptions, WatchSource, WatchStopHandle, WatcherOptions, WritableComputedOptions, WritableComputedRef };
