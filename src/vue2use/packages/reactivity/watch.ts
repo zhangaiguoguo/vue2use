@@ -365,6 +365,10 @@ function doWatch(
           queueWatcher({
             run: buffer.at(-1)?.run,
             before: watcher.before,
+            id: watcher.id,
+            user: watcher.user,
+            expression: watcher.expression,
+            vm: watcher.vm,
           } as Watcher);
         }
       } else {
