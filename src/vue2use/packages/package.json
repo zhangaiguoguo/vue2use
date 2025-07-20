@@ -1,6 +1,6 @@
 {
   "name": "vue2use",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "vue2use",
   "main": "main.ts",
   "module": "dist/vue2use.esm.js",

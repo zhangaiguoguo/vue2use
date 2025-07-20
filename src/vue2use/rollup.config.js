@@ -9,7 +9,7 @@ import dts from "rollup-plugin-dts";
 
 function resolveReplace() {
   const replacements = {
-    "process.env.NODE_ENV": '"production"',
+    "process.env.NODE_ENV": '"dev"',
   };
 
   if (Object.keys(replacements).length) {
